@@ -389,6 +389,33 @@ class phase_canceling_modal_reverb(VrRoom, dsp.DSP):
         self.get_freq_convolve()
         
 
+# class wgn_reverb(VrRoom, dsp.DSP):
+#     # TODO: After modifying wgn_reverb in FLAMO, this class has RT and mean and/or std as parameters. Non-learnable...
+#     # TODO: wgn_reverb is used in get_freq_response()
+#     def __init__(
+#         self,
+#         n_M: int=1,
+#         n_L: int=1,
+#         fs: int=48000,
+#         nfft: int=2**11,
+#         RT: float=1.0,
+#         mean: float=0.0,
+#         std: float=1.0,
+#         requires_grad: bool=False,
+#         alias_decay_db: float=0.0,
+#     ):
+        
+#         VrRoom.__init__(
+#             self,
+#             n_M=n_M,
+#             n_L=n_L,
+#             fs=fs,
+#             nfft=nfft,
+#             alias_decay_db=alias_decay_db
+#         )
+
+#         pass
+
 # ==================================================================
 # =================== INFINITE IMPULSE RESPONSE ====================
 
