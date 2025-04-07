@@ -15,81 +15,49 @@ from flamo.functional import mag2db, get_magnitude
 # ==================================================================
 # ========================== PHYSICAL ROOM =========================
 
-def plot_room_setup(positions: OrderedDict):
+def unpack_kwargs(kwargs):
+    for k, v in kwargs.items():
+        match k:
+            case 'fontsize':
+                plt.rcParams.update({'font.size':v})
+            case 'fontweight':
+                plt.rcParams.update({'font.weight':v})
+            case 'fontfamily':
+                plt.rcParams.update({'font.family':v})
+            case 'usetex':
+                plt.rcParams.update({'text.usetex':v})
+            case 'linewidth':
+                plt.rcParams.update({'lines.linewidth':v})
+            case 'markersize':
+                plt.rcParams.update({'lines.markersize':v})
+            case 'color':
+                colors = v
+            case 'title':
+                title = v
 
-    stg = positions['stg']
-    mcs = positions['mcs']
-    lds = positions['lds']
-    aud = positions['aud']
+def plot_coupling(rirs: torch.Tensor, fs: int, decay_interval: str='T30', **kwargs) -> torch.Tensor:
 
-    if stg == None: stg = torch.tensor([])
-    else: stg = torch.tensor(positions['stg'])
-    if mcs == None: mcs = torch.tensor([])
-    else: mcs = torch.tensor(positions['mcs'])
-    if lds == None: lds = torch.tensor([])
-    else: lds = torch.tensor(positions['lds'])
-    if aud == None: aud = torch.tensor([])
-    else: aud = torch.tensor(positions['aud'])
+    rirs = rirs["h_LM"]
 
-    if torch.sum(torch.tensor([len(stg), len(mcs), len(lds), len(aud)])) == 0:
-        print("Audio setup data is not present for this room.")
-        return None
+    ec = energy_coupling(rirs, fs=fs, decay_interval=decay_interval)
+
+    ec_norm = ec/torch.max(ec)
+    ec_db = 10*torch.log10(ec_norm)
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
-    colorPalette = [
-        "#E3C21C",
-        "#3364D7",
-        "#1AB759",
-        "#D51A43"
-    ]
 
-    # Use constrained layout
-    fig = plt.figure(figsize=(9,4))
+    # plt.figure(figsize=(7,6))
+    plt.figure()
 
-    # 3D Plot
-    ax_3d = fig.add_subplot(111, projection='3d')
-    ax_3d.xaxis.set_pane_color('white')
-    ax_3d.yaxis.set_pane_color('white')
-    ax_3d.zaxis.set_pane_color('white')
+    image = plt.imshow(ec_db)
+    plt.ylabel('Microphone')
+    plt.yticks(torch.arange(start=0, end=rirs.shape[1], step=5 if rirs.shape[1]>10 else 1).numpy(), labels=torch.arange(start=0, end=rirs.shape[1], step=5 if rirs.shape[1]>10 else 1).numpy())
+    plt.xlabel('Loudspeaker')
+    plt.xticks(torch.arange(start=0, end=rirs.shape[2], step=5 if rirs.shape[2]>10 else 1).numpy(), labels=torch.arange(start=0, end=rirs.shape[2], step=5 if rirs.shape[2]>10 else 1).numpy())
+    plt.colorbar(mappable=image, label='Magnitude in dB')
+    plt.title('Energy coupling')
+    plt.tight_layout()
 
-    if len(stg) != 0: ax_3d.scatter(*zip(*stg), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
-    else: stg = torch.tensor([[0, 0, 0]])
-    if len(lds) != 0: ax_3d.scatter(*zip(*lds), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
-    else: lds = torch.tensor([[0, 0, 0]])
-    if len(mcs) != 0: ax_3d.scatter(*zip(*mcs), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
-    else: mcs = torch.tensor([[0, 0, 0]])
-    if len(aud) != 0: ax_3d.scatter(*zip(*aud), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
-    else: aud = torch.tensor([[0, 0, 0]])
-
-    # Labels
-    ax_3d.set_xlabel('x in meters', labelpad=15)
-    ax_3d.set_ylabel('y in meters', labelpad=15)
-    ax_3d.set_zlabel('z in meters', labelpad=2)
-    ax_3d.set_zlim(0,)
-
-    # Equal scaling
-    room_x = torch.max(torch.cat((stg[:, 0], lds[:, 0], mcs[:, 0], aud[:, 0]))).item() - torch.min(torch.cat((stg[:, 0], lds[:, 0], mcs[:, 0], aud[:, 0]))).item()
-    room_y = torch.max(torch.cat((stg[:, 1], lds[:, 1], mcs[:, 1], aud[:, 1]))).item() - torch.min(torch.cat((stg[:, 1], lds[:, 1], mcs[:, 1], aud[:, 1]))).item()
-    room_z = torch.max(torch.cat((stg[:, 2], lds[:, 2], mcs[:, 2], aud[:, 2]))).item()
-    ax_3d.set_box_aspect([room_x, room_y, room_z])
-
-    # Plot orientation
-    ax_3d.view_init(30, 150)
-
-    # Legend Plot
-    ax_3d.legend(
-        loc='center right',  # Center the legend in the legend plot
-        bbox_to_anchor=(2, 0.5),  # Position the legend outside the plot
-        handletextpad=0.1,
-        borderpad=0.2,
-        columnspacing=1.0,
-        borderaxespad=0.1,
-        handlelength=1
-    )
-
-    # Adjust layout
-    fig.tight_layout()
-    fig.subplots_adjust(left=0.00, top=1.3, right=0.5, bottom=-0.1)
     plt.show(block=True)
 
     return None
