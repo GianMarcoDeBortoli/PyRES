@@ -1,6 +1,5 @@
 # ==================================================================
 # ============================ IMPORTS =============================
-<<<<<<< HEAD
 from collections import OrderedDict
 # PyTorch
 import torch
@@ -25,20 +24,6 @@ from PyRES.plots import (
     plot_DRR,
     plot_distributions
 )
-=======
-# Miscellanous
-from collections import OrderedDict
-import json
-# PyTorch
-import torch
-import torch.nn as nn
-import torchaudio
-# FLAMO
-from flamo import dsp
-# PyRES
-from PyRES.metrics import energy_coupling
-from PyRES.plots import plot_room_setup, plot_coupling, plot_DRR
->>>>>>> 70f60c4 (Fixed folder name)
 
 
 # ==================================================================
@@ -66,7 +51,6 @@ class PhRoom(object):
                 - fs (int): Sample rate [Hz].
                 - nfft (int): FFT size.
                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
-<<<<<<< HEAD
                 - transducer_number (OrderedDict): Number of transducers in the room.
                 - transducer_indices (OrderedDict): Indices of the requested stage emitters, system receivers, system emitters and audience receivers.
                 - transducer_positions (OrderedDict): Positions of the requested stage emitters, system receivers, system emitters and audience receivers.
@@ -75,17 +59,6 @@ class PhRoom(object):
                 - h_SM (nn.Module): Room impulse responses bewteen stage emitters and system receivers.
                 - h_LA (nn.Module): Room impulse responses bewteen system emitters and audience receivers.
                 - h_LM (nn.Module): Room impulse responses bewteen system emitters and system receivers.
-=======
-                - n_S (int): Number of stage sources.
-                - n_L (int): Number of system loudspeakers.
-                - n_M (int): Number of system microphones.
-                - n_A (int): Number of audience positions.
-                - rir_length (int): Length of the room impulse responses in samples.
-                - h_SA (nn.Module): Room impulse responses bewteen stage sources and audience positions.
-                - h_SM (nn.Module): Room impulse responses bewteen stage sources and system microphones.
-                - h_LA (nn.Module): Room impulse responses bewteen system loudspeakers and audience positions.
-                - h_LM (nn.Module): Room impulse responses bewteen system loudspeakers and system microphones.
->>>>>>> 70f60c4 (Fixed folder name)
         """
         object.__init__(self)
 
@@ -93,7 +66,6 @@ class PhRoom(object):
         self.nfft = nfft
         self.alias_decay_db = alias_decay_db
 
-<<<<<<< HEAD
         self.transducer_number = OrderedDict(
             {'stg': int, 'mcs': int, 'lds': int, 'aud': int}
         )
@@ -108,20 +80,11 @@ class PhRoom(object):
 
         self.rir_length: int
 
-=======
-        self.n_S: int
-        self.n_L: int
-        self.n_M: int
-        self.n_A: int
-
-        self.rir_length: int
->>>>>>> 70f60c4 (Fixed folder name)
         self.h_SA: nn.Module
         self.h_SM: nn.Module
         self.h_LA: nn.Module
         self.h_LM: nn.Module
 
-<<<<<<< HEAD
         self.energy_coupling = OrderedDict(
             {'SA': torch.Tensor, 'SM': torch.Tensor, 'LM': torch.Tensor, 'LA': torch.Tensor}
         )
@@ -130,8 +93,6 @@ class PhRoom(object):
             {'SA': torch.Tensor, 'SM': torch.Tensor, 'LM': torch.Tensor, 'LA': torch.Tensor}
         )
 
-=======
->>>>>>> 70f60c4 (Fixed folder name)
     def get_ems_rcs_number(self) -> OrderedDict:
         r"""
         Returns the number of emitters and receivers.
@@ -139,19 +100,11 @@ class PhRoom(object):
             **Returns**:
                 - OrderedDict: Number of emitters and receivers.
         """
-<<<<<<< HEAD
         return self.transducer_number
     
     def get_stg_to_aud(self) -> torch.Tensor:
         r"""
         Returns the room impulse responses between stage emitters and audience receivers.
-=======
-        return self.n_S, self.n_M, self.n_L, self.n_A
-    
-    def get_stg_to_aud(self) -> torch.Tensor:
-        r"""
-        Returns the room impulse responses between stage sources and audience positions.
->>>>>>> 70f60c4 (Fixed folder name)
 
             **Returns**:
                 - torch.Tensor: Stage-to-Audience RIRs. shape = (samples, n_A, n_S).
@@ -160,11 +113,7 @@ class PhRoom(object):
 
     def get_stg_to_mcs(self) -> torch.Tensor:
         r"""
-<<<<<<< HEAD
         Returns the room impulse responses between stage emitters and system receivers.
-=======
-        Returns the room impulse responses between stage sources and system microphones.
->>>>>>> 70f60c4 (Fixed folder name)
 
             **Returns**:
                 - torch.Tensor: Stage-to-Microphones RIRs. shape = (samples, n_M, n_S).
@@ -173,11 +122,7 @@ class PhRoom(object):
     
     def get_lds_to_aud(self) -> torch.Tensor:
         r"""
-<<<<<<< HEAD
         Returns the room impulse responses between system emitters and audience receivers.
-=======
-        Returns the room impulse responses between system loudspeakers and audience positions.
->>>>>>> 70f60c4 (Fixed folder name)
 
             **Returns**:
                 - torch.Tensor: Loudspeakers-to-Audience RIRs. shape = (samples n_A, n_L).
@@ -186,11 +131,7 @@ class PhRoom(object):
 
     def get_lds_to_mcs(self) -> torch.Tensor:
         r"""
-<<<<<<< HEAD
         Returns the room impulse responses between system emitters and system receivers.
-=======
-        Returns the room impulse responses between system loudspeakers and system microphones.
->>>>>>> 70f60c4 (Fixed folder name)
 
             **Returns**:
                 - torch.Tensor: Loudspeakers-to-Microphones RIRs. shape = (samples, n_M, n_L).
@@ -205,7 +146,6 @@ class PhRoom(object):
                 - OrderedDict: System RIRs.
         """
         RIRs = OrderedDict()
-<<<<<<< HEAD
         RIRs.update({'SM': self.get_stg_to_mcs().param.clone().detach()})
         RIRs.update({'SA': self.get_stg_to_aud().param.clone().detach()})
         RIRs.update({'LM': self.get_lds_to_mcs().param.clone().detach()})
@@ -261,20 +201,10 @@ class PhRoom(object):
             rirs_LM: torch.Tensor,
             rir_length: int
         ) -> tuple[dsp.Filter, dsp.Filter, dsp.Filter, dsp.Filter]:
-=======
-        RIRs.update({'h_SM': self.get_stg_to_mcs().param.clone().detach()})
-        RIRs.update({'h_SA': self.get_stg_to_aud().param.clone().detach()})
-        RIRs.update({'h_LM': self.get_lds_to_mcs().param.clone().detach()})
-        RIRs.update({'h_LA': self.get_lds_to_aud().param.clone().detach()})
-        return RIRs
-    
-    def create_modules(self, rirs_SA: torch.Tensor, rirs_SM: torch.Tensor, rirs_LA: torch.Tensor, rirs_LM: torch.Tensor, rir_length: int) -> tuple[dsp.Filter, dsp.Filter, dsp.Filter, dsp.Filter]:
->>>>>>> 70f60c4 (Fixed folder name)
         r"""
         Creates the processing modules for the room-impulse-response blocks.
 
             **Args**:
-<<<<<<< HEAD
                 - rirs_SA (torch.Tensor): Room impulse responses between stage emitters and audience receivers.
                 - rirs_SM (torch.Tensor): Room impulse responses between stage emitters and system receivers.
                 - rirs_LA (torch.Tensor): Room impulse responses between system emitters and audience receivers.
@@ -296,24 +226,6 @@ class PhRoom(object):
         # Stage to Audience
         h_SA = dsp.Filter(
             size=(rir_length, n_A, n_S),
-=======
-                - rirs_SA (torch.Tensor): Room impulse responses between stage sources and audience positions.
-                - rirs_SM (torch.Tensor): Room impulse responses between stage sources and system microphones.
-                - rirs_LA (torch.Tensor): Room impulse responses between system loudspeakers and audience positions.
-                - rirs_LM (torch.Tensor): Room impulse responses between system loudspeakers and system microphones.
-                - rir_length (int): Length of the room impulse responses in samples.
-
-            **Returns**:
-                - dsp.Filter: Room impulse responses bewteen stage sources and audience positions.
-                - dsp.Filter: Room impulse responses bewteen stage sources and system microphones.
-                - dsp.Filter: Room impulse responses bewteen system loudspeakers and audience positions.
-                - dsp.Filter: Room impulse responses bewteen system loudspeakers and system microphones.
-        """
-
-        # Stage to Audience
-        h_SA = dsp.Filter(
-            size=(rir_length, self.n_A, self.n_S),
->>>>>>> 70f60c4 (Fixed folder name)
             nfft=self.nfft,
             requires_grad=False,
             alias_decay_db=self.alias_decay_db
@@ -322,11 +234,7 @@ class PhRoom(object):
 
         # Stage to Microphones
         h_SM = dsp.Filter(
-<<<<<<< HEAD
             size=(rir_length, n_M, n_S),
-=======
-            size=(rir_length, self.n_M, self.n_S),
->>>>>>> 70f60c4 (Fixed folder name)
             nfft=self.nfft,
             requires_grad=False,
             alias_decay_db=self.alias_decay_db
@@ -335,11 +243,7 @@ class PhRoom(object):
 
         # Loudspeakers to Audience
         h_LM = dsp.Filter(
-<<<<<<< HEAD
             size=(rir_length, n_M, n_L),
-=======
-            size=(rir_length, self.n_M, self.n_L),
->>>>>>> 70f60c4 (Fixed folder name)
             nfft=self.nfft,
             requires_grad=False,
             alias_decay_db=self.alias_decay_db
@@ -348,11 +252,7 @@ class PhRoom(object):
 
         # Loudspeakers to Microphones
         h_LA = dsp.Filter(
-<<<<<<< HEAD
             size=(rir_length, n_A, n_L),
-=======
-            size=(rir_length, self.n_A, self.n_L),
->>>>>>> 70f60c4 (Fixed folder name)
             nfft=self.nfft,
             requires_grad=False,
             alias_decay_db=self.alias_decay_db
@@ -365,29 +265,20 @@ class PhRoom(object):
         r"""
         Plots the room setup.
         """
-<<<<<<< HEAD
         plot_room_setup(self.transducer_positions)
         return None
-=======
-        plot_room_setup(self)
->>>>>>> 70f60c4 (Fixed folder name)
     
     def plot_coupling(self) -> None:
         r"""
         Plots the room coupling.
         """
-<<<<<<< HEAD
         plot_coupling(energy_values=self.energy_coupling)
         return None
-=======
-        plot_coupling(rirs=self.get_rirs(), fs=self.fs)
->>>>>>> 70f60c4 (Fixed folder name)
     
     def plot_DRR(self) -> None:
         r"""
         Plots the direct-to-reverberant ratio (DRR).
         """
-<<<<<<< HEAD
         plot_DRR(direct_to_reverb_ratios=self.direct_to_reverb_ratio)
         return None
 
@@ -411,9 +302,6 @@ class PhRoom(object):
         plot_distributions(distributions=distributions, n_bins=self.nfft//100, labels=['Real', 'Imaginary'])
 
         return None
-=======
-        plot_DRR(rirs=self.get_rirs(), fs=self.fs)
->>>>>>> 70f60c4 (Fixed folder name)
 
 
 # ==================================================================
@@ -429,15 +317,11 @@ class PhRoom_dataset(PhRoom):
             nfft: int,
             alias_decay_db: float,
             dataset_directory: str,
-<<<<<<< HEAD
             room_name: str,
             stg_idx: list[int] = None,
             mcs_idx: list[int] = None,
             lds_idx: list[int] = None,
             aud_idx: list[int] = None
-=======
-            room_name: str
->>>>>>> 70f60c4 (Fixed folder name)
         ) -> None:
         r"""
         Initializes the PhRoom_dataset object.
@@ -448,13 +332,10 @@ class PhRoom_dataset(PhRoom):
                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
                 - dataset_directory (str): Path to the dataset.
                 - room_name (str): Name of the room.
-<<<<<<< HEAD
                 - stg_idx (list[int]): List of indices of the requested stage emitters.
                 - mcs_idx (list[int]): List of indices of the requested system receivers.
                 - lds_idx (list[int]): List of indices of the requested system emitters.
                 - aud_idx (list[int]): List of indices of the requested audience receivers.
-=======
->>>>>>> 70f60c4 (Fixed folder name)
 
             **Attributes**:
                 - fs (int): Sample rate [Hz].
@@ -463,7 +344,6 @@ class PhRoom_dataset(PhRoom):
                 - room_name (str): Name of the room.
                 - high_level_info (dict): High-level information of the room.
                 - low_level_info (dict): Low-level information of the room.
-<<<<<<< HEAD
                 - transducer_number (OrderedDict): Number of transducers in the room.
                 - transducer_indices (OrderedDict): Indices of the requested stage emitters, system receivers, system emitters and audience receivers.
                 - transducer_positions (OrderedDict): Positions of the requested stage emitters, system receivers, system emitters and audience receivers.
@@ -472,17 +352,6 @@ class PhRoom_dataset(PhRoom):
                 - h_SM (nn.Module): Room impulse responses bewteen stage emitters and system receivers.
                 - h_LA (nn.Module): Room impulse responses bewteen system emitters and audience receivers.
                 - h_LM (nn.Module): Room impulse responses bewteen system emitters and system receivers.
-=======
-                - n_S (int): Number of stage sources.
-                - n_L (int): Number of system loudspeakers.
-                - n_M (int): Number of system microphones.
-                - n_A (int): Number of audience positions.
-                - rir_length (int): Length of the room impulse responses in samples.
-                - h_SA (nn.Module): Room impulse responses bewteen stage sources and audience positions.
-                - h_SM (nn.Module): Room impulse responses bewteen stage sources and system microphones.
-                - h_LA (nn.Module): Room impulse responses bewteen system loudspeakers and audience positions.
-                - h_LM (nn.Module): Room impulse responses bewteen system loudspeakers and system microphones.
->>>>>>> 70f60c4 (Fixed folder name)
         """
         super().__init__(
             fs=fs,
@@ -491,7 +360,6 @@ class PhRoom_dataset(PhRoom):
         )
 
         self.room_name = room_name
-<<<<<<< HEAD
 
         self.high_level_info = get_hl_info(
             ds_dir=dataset_directory,
@@ -521,78 +389,12 @@ class PhRoom_dataset(PhRoom):
             aud_idx=self.transducer_indices['aud']
         )
 
-=======
-        self.high_level_info = self.__find_room_in_dataset(
-            ds_dir=dataset_directory,
-            room=room_name
-        )
-
-        self.low_level_info = self.__get_room_info(
-            ds_dir=dataset_directory,
-            room_dir=self.high_level_info['RoomDirectory']
-        )
-
-        self.n_S, self.n_M, self.n_L, self.n_A = self.__ems_rcs_number()
->>>>>>> 70f60c4 (Fixed folder name)
         self.h_SA, self.h_SM, self.h_LA, self.h_LM, self.rir_length = self.__load_rirs(
             ds_dir=dataset_directory
         )
 
-<<<<<<< HEAD
         self.energy_coupling = self.compute_energy_coupling()
         self.direct_to_reverb_ratio = self.compute_direct_to_reverb_ratio()
-=======
-    def __find_room_in_dataset(self, ds_dir: str, room: str) -> dict:
-        r"""
-        Finds the room in the dataset.
-
-            **Args**:
-                - ds_dir (str): Path to the dataset.
-                - room (str): Name of the room.
-
-            **Returns**:
-                - dict: High-level information of the room.
-        """
-        ds_dir = ds_dir.rstrip('/')
-        with open(f"{ds_dir}/datasetInfo.json", 'r') as file:
-            data = json.load(file)
-        
-        return data['Rooms'][room]
-    
-    def __get_room_info(self, ds_dir: str, room_dir: str) -> dict:
-        r"""
-        Gets the room information.
-
-            **Args**:
-                - ds_dir (str): Path to the dataset.
-                - room_dir (str): Path to the room in the dataset.
-
-            **Returns**:
-                - dict: Low-level information of the room.
-        """
-        ds_dir = ds_dir.rstrip('/')
-        with open(f"{ds_dir}/data/{room_dir}/roomInfo.json", 'r') as file:
-            data = json.load(file)
-
-        return data
-    
-    def __ems_rcs_number(self) -> tuple[int, int, int, int]:
-        r"""
-        Scans the room information for the number of emitters and receivers.
-
-            **Returns**:
-                - int: Number of stage sources.
-                - int: Number of system microphones.
-                - int: Number of system loudspeakers.
-                - int: Number of audience positions.
-        """
-        n_S = self.low_level_info['StageAndAudience']['StageEmitters']['Number']
-        n_M = self.low_level_info['AudioSetup']['SystemReceivers']['Number']
-        n_L = self.low_level_info['AudioSetup']['SystemEmitters']['Number']
-        n_A = self.low_level_info['StageAndAudience']['AudienceReceivers']['MonochannelNumber']
-
-        return n_S, n_M, n_L, n_A
->>>>>>> 70f60c4 (Fixed folder name)
 
     def __load_rirs(self, ds_dir: str) -> tuple[dsp.Filter, dsp.Filter, dsp.Filter, dsp.Filter, int]:
         r"""
@@ -602,7 +404,6 @@ class PhRoom_dataset(PhRoom):
                 - ds_dir (str): Path to the dataset.
             
             **Returns**:
-<<<<<<< HEAD
                 - dsp.Filter: Room impulse responses bewteen stage emitters and audience receivers.
                 - dsp.Filter: Room impulse responses bewteen stage emitters and system receivers.
                 - dsp.Filter: Room impulse responses bewteen system emitters and audience receivers.
@@ -632,46 +433,11 @@ class PhRoom_dataset(PhRoom):
             rirs_SM=rirs_norm["stg_to_sys"],
             rirs_LA=rirs_norm["sys_to_aud"],
             rirs_LM=rirs_norm["sys_to_sys"],
-=======
-                - dsp.Filter: Room impulse responses bewteen stage sources and audience positions.
-                - dsp.Filter: Room impulse responses bewteen stage sources and system microphones.
-                - dsp.Filter: Room impulse responses bewteen system loudspeakers and audience positions.
-                - dsp.Filter: Room impulse responses bewteen system loudspeakers and system microphones.
-                - int: Length of the room impulse responses in samples.
-        """
-
-        rir_info = self.low_level_info['RoomImpulseResponses']
-
-        rir_fs = rir_info['SampleRate_Hz']
-        rir_length = rir_info['LengthInSamples']
-
-        if rir_fs != self.fs:
-            rir_length = int(self.fs * rir_length/rir_fs)
-
-        ds_dir = ds_dir.rstrip('/')
-        path_root = f"{ds_dir}/data/{self.high_level_info['RoomDirectory']}/{rir_info['Directory']}"
-
-        path = f"{path_root}/{rir_info['StageEmitters-AudienceReceivers']['Directory']}"
-        stg_to_aud = self.__load_rir_matrix(path=f"{path}", n_emitters=self.n_S, n_receivers=self.n_A, fs=rir_fs, n_samples=rir_length)
-        path = f"{path_root}/{rir_info['StageEmitters-SystemReceivers']['Directory']}"
-        stg_to_sys = self.__load_rir_matrix(path=f"{path}", n_emitters=self.n_S, n_receivers=self.n_M, fs=rir_fs, n_samples=rir_length)
-        path = f"{path_root}/{rir_info['SystemEmitters-AudienceReceivers']['Directory']}"
-        sys_to_aud = self.__load_rir_matrix(path=f"{path}", n_emitters=self.n_L, n_receivers=self.n_A, fs=rir_fs, n_samples=rir_length)
-        path = f"{path_root}/{rir_info['SystemEmitters-SystemReceivers']['Directory']}"
-        sys_to_sys = self.__load_rir_matrix(path=f"{path}", n_emitters=self.n_L, n_receivers=self.n_M, fs=rir_fs, n_samples=rir_length)
-
-        h_SA, h_SM, h_LA, h_LM = self.create_modules(
-            rirs_SA=stg_to_aud,
-            rirs_SM=stg_to_sys,
-            rirs_LA=sys_to_aud,
-            rirs_LM=sys_to_sys,
->>>>>>> 70f60c4 (Fixed folder name)
             rir_length=rir_length
         )
 
         return h_SA, h_SM, h_LA, h_LM, rir_length
     
-<<<<<<< HEAD
 # ==================================================================
 # =================== WHITE GAUSSIAN NOISE CLASS ===================
 
@@ -887,34 +653,3 @@ class PhRoom_wgn(PhRoom):
         self.direct_to_reverb_ratio['LM'] = direct_to_reverb_ratio(new_rirs, fs=self.fs)
 
         return None
-=======
-    def __load_rir_matrix(self, path: str, n_emitters: int, n_receivers: int, fs: int, n_samples: int) -> torch.Tensor:
-        r"""
-        Loads the room impulse responses from the dataset and returns them in a matrix.
-
-            **Args**:
-                - path (str): Path to the room impulse responses in the dataset.
-                - n_sources (int): Number of emitters.
-                - n_receivers (int): Number of receivers.
-                - fs (int): Sample rate [Hz].
-                - n_samples (int): Length of the room impulse responses in samples.
-
-            **Returns**:
-                - torch.Tensor: Room-impulse-response matrix as a torch tensor [n_samples, n_receivers, n_emitters].
-        """
-        matrix = torch.zeros(n_samples, n_receivers, n_emitters)
-        for i in range(n_receivers):
-            for j in range(n_emitters):
-                w = torchaudio.load(f"{path}/E{j+1:03d}_R{i+1:03d}_M01.wav")[0]
-                if self.fs != fs:
-                    w = torchaudio.transforms.Resample(fs, self.fs)(w)
-                matrix[:,i,j] = w.permute(1,0).squeeze()
-
-        # Energy normalization
-        ec = energy_coupling(rir=matrix, fs=self.fs, decay_interval='T30')
-        norm_factor = torch.max(torch.tensor([self.n_L, self.n_M])) * torch.sqrt(torch.median(ec))
-        matrix = matrix/norm_factor
-
-        return matrix
-    
->>>>>>> 70f60c4 (Fixed folder name)
