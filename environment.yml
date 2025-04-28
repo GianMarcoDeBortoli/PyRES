@@ -1,0 +1,22 @@
+name: pyres-env
+
+channels:
+  - conda-forge
+  - defaults
+  
+dependencies:
+  - python=3.10
+  - pip
+  - libsndfile
+  - pip:
+    - flamo
+    - torch
+    - torchaudio
+    - numpy
+    - pyfar
+    - pyrato
+    - seaborn
+    - matplotlib
+    - pyqt5
+    - pyqt6
+    - pysoundfile

@@ -167,7 +167,9 @@ cython_debug/
 .Spotlight-V100
 .Trashes
 
-# PyRES
+# flamo
 /training_output
+
+# PyRES
 /model_states
 /dataRES
