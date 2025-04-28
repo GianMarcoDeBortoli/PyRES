@@ -1,0 +1,11 @@
+flamo
+torch
+torchaudio
+numpy
+pyfar
+pyrato
+seaborn
+matplotlib
+pyqt5
+pyqt6
+pysoundfile
