@@ -136,7 +136,7 @@ def train_virtual_room(args) -> None:
     
     # ------------------------ Plots -------------------------
     plot_evs(evs_init, evs_opt, samplerate, nfft, 20, 8000)
-    plot_spectrograms(ir_init, ir_opt, samplerate, nfft=2**8, noverlap=2**7)
+    plot_spectrograms(ir_init[:,0], ir_opt[:,0], samplerate, nfft=2**8, noverlap=2**7)
 
     # ---------------- Save the model parameters -------------
     # If desired, you can use the following line to save the virtual room model state.
