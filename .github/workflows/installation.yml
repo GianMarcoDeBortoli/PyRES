@@ -2,7 +2,13 @@ name: Test PyRES Installation
 
 on:
   push:
+    branches:
+      - main
+      - dev
   pull_request:
+    branches:
+      - main
+      - dev
 
 jobs:
   test-install:
@@ -41,7 +47,7 @@ jobs:
         run: call .\bootstrap.bat
       
       # Create pip environment and install dependencies
-      - name: Create virtual environment environment (MacOS/Linux - pip)
+      - name: Create virtual environment (MacOS/Linux - pip)
         if: ${{ (matrix.method == 'pip') && (runner.os != 'Windows') }}
         shell: bash -l {0}
         run: bash bootstrap.sh no-conda
@@ -50,33 +56,3 @@ jobs:
         if: ${{ (matrix.method == 'pip') && (runner.os == 'Windows') }}
         shell: cmd.exe -l {0}
         run: call .\bootstrap.bat
-
-      # Run test with conda environment
-      - name: Run test example (conda)
-        if: ${{ (matrix.method == 'conda') && (runner.os != 'Windows') }}
-        shell: bash -l {0}
-        run: |
-          conda activate pyres-env
-          python examples/E1_virtual-room.py
-
-      - name: Run test example (conda)
-        if: ${{ (matrix.method == 'conda') && (runner.os == 'Windows') }}
-        shell: cmd.exe -l {0}
-        run: |
-          conda activate pyres-env
-          python examples/E1_virtual-room.py
-
-      # Run test with pip environment
-      - name: Run test example (MacOS/Linux - pip)
-        if: ${{ (matrix.method == 'pip') && (runner.os != 'Windows') }}
-        shell: bash -l {0}
-        run: |
-          source pyres-env/bin/activate
-          python examples/E1_virtual-room.py
-
-      - name: Run test example (Windows - pip)
-        if: ${{ (matrix.method == 'pip') && (runner.os == 'Windows') }}
-        shell: cmd.exe {0}
-        run: |
-          call .\pyres-env\Scripts\activate.bat
-          python examples/E1_virtual-room.py

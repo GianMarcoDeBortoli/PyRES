@@ -1,0 +1,41 @@
+name: Test PyRES update
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - test
+
+jobs:
+  test-install:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      # Create virtual environment and install dependencies
+      - name: Create virtual environment
+        shell: bash -l {0}
+        run: |
+          brew install libsndfile
+          python -m venv pyres-env
+          source pyres-env/bin/activate
+          echo "export DYLD_LIBRARY_PATH=$(brew --prefix libsndfile)/lib:$DYLD_LIBRARY_PATH" >> pyres-env/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Run test code
+      - name: Run test example (MacOS/Linux - pip)
+        shell: bash -l {0}
+        run: |
+          source pyres-env/bin/activate
+          python examples/E1_virtual-room.py
