@@ -48,7 +48,6 @@ if __name__ == '__main__':
         requires_grad=True
     )
 
-
     # Reverberation Enhancement System
     res_1 = RES(
         physical_room = physical_room,

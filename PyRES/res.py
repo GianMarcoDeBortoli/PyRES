@@ -300,7 +300,7 @@ class RES(object):
         _, fr_matrix = self.open_loop_responses()
         with torch.no_grad():
             # Compute eigenvalues
-            evs = get_eigenvalues(fr_matrix)
+            evs = get_eigenvalues(fr_matrix.unsqueeze(1).unsqueeze(2))
 
         return evs.squeeze()
     
