@@ -286,7 +286,12 @@ class RES(object):
             open_loop_irs = open_loop.get_time_response(fs=self.fs, identity=True)
             open_loop_fr = open_loop.get_freq_response(fs=self.fs, identity=True)
 
-        return open_loop_irs.squeeze(), open_loop_fr.squeeze()
+        if open_loop_irs.ndim == 3:
+            open_loop_irs = open_loop_irs.unsqueeze(-1)
+        if open_loop_fr.ndim == 3:
+            open_loop_fr = open_loop_fr.unsqueeze(-1)
+
+        return open_loop_irs, open_loop_fr
 
     def open_loop_eigenvalues(self) -> torch.Tensor:
         r"""
@@ -300,7 +305,7 @@ class RES(object):
         _, fr_matrix = self.open_loop_responses()
         with torch.no_grad():
             # Compute eigenvalues
-            evs = get_eigenvalues(fr_matrix.unsqueeze(1).unsqueeze(2))
+            evs = get_eigenvalues(fr_matrix)
 
         return evs.squeeze()
     
@@ -334,7 +339,12 @@ class RES(object):
             closed_loop_irs = closed_loop.get_time_response(fs=self.fs, identity=True)
             closed_loop_fr = closed_loop.get_freq_response(fs=self.fs, identity=True)
 
-        return closed_loop_irs.squeeze(), closed_loop_fr.squeeze()
+        if closed_loop_irs.ndim == 3:
+            closed_loop_irs = closed_loop_irs.unsqueeze(-1)
+        if closed_loop_fr.ndim == 3:
+            closed_loop_fr = closed_loop_fr.unsqueeze(-1)
+
+        return closed_loop_irs, closed_loop_fr
     
     def closed_loop_eigenvalues(self) -> torch.Tensor:
         r"""

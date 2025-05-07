@@ -312,8 +312,6 @@ class PhRoom_dataset(PhRoom):
         n_M = self.low_level_info['AudioSetup']['SystemReceivers']['Number']
         n_L = self.low_level_info['AudioSetup']['SystemEmitters']['Number']
         n_A = self.low_level_info['StageAndAudience']['AudienceReceivers']['MonochannelNumber']
-        n_L = 1
-        n_M = 1
 
         return n_S, n_M, n_L, n_A
 
@@ -362,36 +360,6 @@ class PhRoom_dataset(PhRoom):
 
         return h_SA, h_SM, h_LA, h_LM, rir_length
     
-    # def __load_rir_matrix(self, path: str, n_emitters: int, n_receivers: int, fs: int, n_samples: int) -> torch.Tensor:
-    #     r"""
-    #     Loads the room impulse responses from the dataset and returns them in a matrix.
-
-    #         **Args**:
-    #             - path (str): Path to the room impulse responses in the dataset.
-    #             - n_sources (int): Number of emitters.
-    #             - n_receivers (int): Number of receivers.
-    #             - fs (int): Sample rate [Hz].
-    #             - n_samples (int): Length of the room impulse responses in samples.
-
-    #         **Returns**:
-    #             - torch.Tensor: Room-impulse-response matrix as a torch tensor [n_samples, n_receivers, n_emitters].
-    #     """
-    #     matrix = torch.zeros(n_samples, n_receivers, n_emitters)
-    #     for i in range(n_receivers):
-    #         for j in range(n_emitters):
-    #             w = torchaudio.load(f"{path}/E{j+1:03d}_R{i+1:03d}_M01.wav")[0]
-    #             if self.fs != fs:
-    #                 w = torchaudio.transforms.Resample(fs, self.fs)(w)
-    #             matrix[:,i,j] = w.permute(1,0).squeeze()
-
-    #     # Energy normalization
-    #     ec = energy_coupling(rir=matrix, fs=self.fs, decay_interval='T30')
-    #     norm_factor = torch.max(torch.tensor([self.n_L, self.n_M])) * torch.sqrt(torch.median(ec))
-    #     matrix = matrix/norm_factor
-
-    #     return matrix
-    
-
     def __load_rir_matrix(self, path: str, n_emitters: int, n_receivers: int, fs: int, n_samples: int) -> torch.Tensor:
         r"""
         Loads the room impulse responses from the dataset and returns them in a matrix.
@@ -406,17 +374,10 @@ class PhRoom_dataset(PhRoom):
             **Returns**:
                 - torch.Tensor: Room-impulse-response matrix as a torch tensor [n_samples, n_receivers, n_emitters].
         """
-        if n_emitters == 1 and n_receivers == 1:
-            ems = [0]
-
         matrix = torch.zeros(n_samples, n_receivers, n_emitters)
         for i in range(n_receivers):
             for j in range(n_emitters):
-                if n_emitters == 1 and n_receivers == 1:
-                    filename = f"{path}/E{ems[j]+1:03d}_R{i+1:03d}_M01.wav"
-                else:
-                    filename = f"{path}/E{j+1:03d}_R{i+1:03d}_M01.wav"
-                w = torchaudio.load(filename)[0]
+                w = torchaudio.load(f"{path}/E{j+1:03d}_R{i+1:03d}_M01.wav")[0]
                 if self.fs != fs:
                     w = torchaudio.transforms.Resample(fs, self.fs)(w)
                 matrix[:,i,j] = w.permute(1,0).squeeze()
