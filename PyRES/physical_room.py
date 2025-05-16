@@ -365,3 +365,71 @@ class PhRoom_dataset(PhRoom):
         )
 
         return h_SA, h_SM, h_LA, h_LM, rir_length
+
+# class PhRoom_ISM(PhRoom):
+#     r"""
+#     Subclass of PhRoom that generates the room impulse responses of a shoebox room simulated through Image Source Method (ISM).
+#     Reference:
+#         pyroomacoustics:
+#         https://pyroomacoustics.readthedocs.io/en/pypi-release/pyroomacoustics.room.html
+#     """
+#     def __init__(
+#             self,
+#             room_size: tuple[float, float, float],
+#             room_RT: float,
+#             ISM_max_order: int,
+#             fs: int,
+#             nfft: int,
+#             alias_decay_db: float,
+#             n_S: int,
+#             n_L: int,
+#             n_A: int,
+#             n_M: int
+#         ) -> None:
+#         r"""
+#         Initializes the PhRoom_wgn object.
+
+#             **Args**:
+#                 - room_size (tuple[float, float, float]): Room size in meters.
+#                 - room_RT (float): Room reverberation time [s].
+#                 - ISM_max_order (int): Maximum order of the Image Source Method.
+#                 - fs (int): Sample rate [Hz].
+#                 - nfft (int): FFT size.
+#                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
+#                 - n_S (int): Number of stage sources.
+#                 - n_L (int): Number of system loudspeakers.
+#                 - n_M (int): Number of system microphones.
+#                 - n_A (int): Number of audience positions.
+#         """
+#         assert n_S >= 0, "The number of stage sources must be higher than or equal to 0."
+#         assert n_L > 0,  "The number of system loudspeakers must be higher than 0."
+#         assert n_M > 0,  "The number of system microphones must be higher than 0."
+#         assert n_A >= 0, "The number of audience positions must be higher than or equal to 0."
+
+#         super().__init__(
+#             self,
+#             fs=fs,
+#             nfft=nfft,
+#             alias_decay_db=alias_decay_db
+#         )
+
+#         self.RT = room_RT
+#         self.room_size = room_size
+#         self.max_order = ISM_max_order
+        
+#         self.n_S = n_S
+#         self.n_L = n_L
+#         self.n_M = n_M
+#         self.n_A = n_A
+
+#         self.h_SA, self.h_SM, self.h_LA, self.h_LM, self.rir_length = self.__generate_rirs()
+
+#     def __generate_rirs(self) -> tuple[OrderedDict[str, torch.Tensor], int]:
+
+#         # e_absorption, max_order = pra.inverse_sabine(rt60, room_dim)
+
+#         # room = pra.ShoeBox(
+#         #     room_dim, fs=16000, materials=pra.Material(e_absorption), max_order=max_order
+#         # )
+
+#         pass
