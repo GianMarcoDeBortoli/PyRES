@@ -6,6 +6,9 @@ import time
 import torch
 
 from flamo import system, dsp
+from flamo.optimize.dataset import Dataset, load_dataset
+from flamo.optimize.trainer import Trainer
+from PyRES.loss_functions import MSE_evs_idxs, colorless_reverb
 from flamo.functional import db2mag, mag2db
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -159,25 +162,26 @@ def dafx_big_figure(args) -> None:
         dataset_directory=room_dataset,
         room_name=room1
     )
-    _, n_mcs, n_lds, _ = physical_room1.get_ems_rcs_number()
+    n_mcs = physical_room1.transducer_number['mcs']
+    n_lds = physical_room1.transducer_number['lds']
 
     # Virtual rooms per room 1
     firs1, fdn1, mm1, mr1, ur1 = all_dsps(n_mcs, n_lds, samplerate, nfft, alias_decay_db)
 
     res11 = RES(physical_room=physical_room1, virtual_room=mm1)
-    aur11 = res11.system_simulation()[:].squeeze()
+    aur11 = res11.system_simulation()[:,0].squeeze()
     evs11 = mag2db(res11.open_loop_eigenvalues())[idx1:idx2,:]
 
     res21 = RES(physical_room=physical_room1, virtual_room=firs1)
-    aur21 = res21.system_simulation()[:].squeeze()
+    aur21 = res21.system_simulation()[:,0].squeeze()
     evs21 = mag2db(res21.open_loop_eigenvalues())[idx1:idx2,:]
 
     res31 = RES(physical_room=physical_room1, virtual_room=fdn1)
-    aur31 = res31.system_simulation()[:].squeeze()
+    aur31 = res31.system_simulation()[:,0].squeeze()
     evs31 = mag2db(res31.open_loop_eigenvalues())[idx1:idx2,:]
 
     res41 = RES(physical_room=physical_room1, virtual_room=ur1)
-    aur41 = res41.system_simulation()[:].squeeze()
+    aur41 = res41.system_simulation()[:,0].squeeze()
     evs41 = mag2db(res41.open_loop_eigenvalues())[idx1:idx2,:]
 
     physical_room1_resampled = PhRoom_dataset(
@@ -188,11 +192,11 @@ def dafx_big_figure(args) -> None:
         room_name=room1
     )
     res51 = RES(physical_room=physical_room1_resampled, virtual_room=mr1)
-    aur51 = res51.system_simulation()[:].squeeze()
+    aur51 = res51.system_simulation()[:,0].squeeze()
     evs51 = mag2db(res51.open_loop_eigenvalues())[2*50:2*450,:]
 
     # Physical room 2
-    room2 = 'ImmersiveLab_T1'                  # Path to the room impulse responses
+    room2 = 'ImmersiveLab'                  # Path to the room impulse responses
     physical_room2 = PhRoom_dataset(
         fs=samplerate,
         nfft=nfft,
@@ -200,7 +204,8 @@ def dafx_big_figure(args) -> None:
         dataset_directory=room_dataset,
         room_name=room2
     )
-    _, n_mcs, n_lds, _ = physical_room2.get_ems_rcs_number()
+    n_mcs = physical_room2.transducer_number['mcs']
+    n_lds = physical_room2.transducer_number['lds']
 
     # Virtual rooms per room 2
     firs2, fdn2, mm2, mr2, ur2 = all_dsps(n_mcs, n_lds, samplerate, nfft, alias_decay_db)
@@ -241,7 +246,8 @@ def dafx_big_figure(args) -> None:
         dataset_directory=room_dataset,
         room_name=room3
     )
-    _, n_mcs, n_lds, _ = physical_room3.get_ems_rcs_number()
+    n_mcs = physical_room3.transducer_number['mcs']
+    n_lds = physical_room3.transducer_number['lds']
 
     # Virtual rooms per room 3
     firs3, fdn3, mm3, mr3, ur3 = all_dsps(n_mcs, n_lds, samplerate, nfft, alias_decay_db)
@@ -305,7 +311,7 @@ def dafx_big_figure(args) -> None:
         rows=5,
         cols=3,
         row_labels=['Unitary mixing matrix', 'FIRs', 'FDN', 'Unitary reverb', 'Modal reverb'],
-        col_labels=['Otala', 'ImmersiveLab T1', 'GLiveLab Tampere'],
+        col_labels=['Otala', 'ImmersiveLab', 'GLivelab-Tampere'],
         figsize=(8,9),
         cmap='magma'
     )
@@ -393,7 +399,8 @@ def dafx_figures_jaes24(args):
         dataset_directory=room_dataset,
         room_name=room
     )
-    _, n_mcs, n_lds, _ = physical_room.get_ems_rcs_number()
+    n_mcs = physical_room.transducer_number['mcs']
+    n_lds = physical_room.transducer_number['lds']
 
     # Virtual rooms
     MR_n_modes = 120                   # Modal reverb number of modes
@@ -421,7 +428,8 @@ def dafx_figures_jaes24(args):
         virtual_room=virtual_room
     )
     gbi = mag2db(res.compute_GBI())
-    res.set_G(db2mag(gbi - 3))
+    print(f'Initial GBI: {gbi:.2f} dB')
+    res.set_G(db2mag(gbi - 2))
 
     # ------------------- Initialization ----------------------
     evs_init = res.open_loop_eigenvalues()
@@ -429,13 +437,16 @@ def dafx_figures_jaes24(args):
 
     # -------------------- Optimization -----------------------
     virtual_room.load_state_dict(torch.load('./model_states/modalReverb_Otala.pt'))
+    opt = system.Shell(core=virtual_room)
+    tfs_opt = opt.get_freq_response(identity=True).squeeze()
     gbi = mag2db(res.compute_GBI())
-    res.set_G(db2mag(gbi - 3))
+    print(f'Optimized GBI: {gbi:.2f} dB')
+    # res.set_G(db2mag(gbi - 3))
     evs_opt = res.open_loop_eigenvalues()
     irs_opt = res.system_simulation()
 
     # plot_evs(evs_init=evs_init, evs_opt=evs_opt, fs=samplerate, nfft=nfft, lower_f_lim=MR_f_low-10, higher_f_lim=MR_f_high+10)
-    plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [30,470], irs_init.squeeze(), irs_opt.squeeze(), [20,500], cmap='magma')
+    plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [30,470], irs_init[:,0].squeeze(), irs_opt[:,0].squeeze(), [20,500], cmap='magma')
 
     return None
 
@@ -474,4 +485,4 @@ if __name__ == '__main__':
         f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 
     # Run examples
-    dafx_figures_PhRoom(args)
+    dafx_figures_jaes24(args)

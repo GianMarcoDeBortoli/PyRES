@@ -636,7 +636,7 @@ def plot_combined_figure(fs, nfft, evs_init, evs_opt, evs_f_range, ir_init, ir_o
     ax_box.scatter([0,1], max_vals, marker="o", s=35, edgecolors='black', facecolors=colors[0:2])
     ax_box.set_xticks([0,1],["Init", "Opt"])
     ax_box.set_ylabel("Magnitude in dB")
-    ax_box.set_ylim(-42, 0)
+    ax_box.set_ylim(-45, 0)
     ax_box.set_yticks(ticks=[-40, -30, -20, -10, 0], labels=['-40', '-30', '-20', '-10', '0'])
     ax_box.tick_params(axis='y', labelsize=14)
     ax_box.grid(True)

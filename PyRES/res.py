@@ -94,10 +94,10 @@ class RES(object):
 
     def __check_io_compatibility(self, physical_room: PhRoom, virtual_room: VrRoom) -> tuple[int, int, int, int]:
         
-        assert(physical_room.n_M == virtual_room.n_M), "Number of microphones must be the same in physical and virtual rooms."
-        assert(physical_room.n_L == virtual_room.n_L), "Number of loudspeakers must be the same in physical and virtual rooms."
+        assert(physical_room.transducer_number['mcs'] == virtual_room.n_M), "Number of microphones must be the same in physical and virtual rooms."
+        assert(physical_room.transducer_number['lds'] == virtual_room.n_L), "Number of loudspeakers must be the same in physical and virtual rooms."
 
-        return physical_room.n_S, physical_room.n_M, physical_room.n_L, physical_room.n_A
+        return physical_room.transducer_number['stg'], physical_room.transducer_number['mcs'], physical_room.transducer_number['lds'], physical_room.transducer_number['aud']
 
     # ==================================================================================
     # ============================ PHYSICAL ROOM METHODS ===============================
