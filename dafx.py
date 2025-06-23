@@ -8,7 +8,7 @@ import torch
 from flamo import system, dsp
 from flamo.optimize.dataset import Dataset, load_dataset
 from flamo.optimize.trainer import Trainer
-from PyRES.loss_functions import MSE_evs_idxs, colorless_reverb
+from PyRES.loss_functions import MSE_evs_idxs, colorless_reverb, MSE_evs_mod
 from flamo.functional import db2mag, mag2db
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -238,7 +238,7 @@ def dafx_big_figure(args) -> None:
     evs52 = mag2db(res52.open_loop_eigenvalues())[2*50:2*450,:]
 
     # Physical room 3
-    room3 = 'GLiveLab-Tampere'                  # Path to the room impulse responses
+    room3 = 'GLivelab-Tampere'                  # Path to the room impulse responses
     physical_room3 = PhRoom_dataset(
         fs=samplerate,
         nfft=nfft,
@@ -336,7 +336,8 @@ def dafx_figures_dafx24(args) -> None:
         dataset_directory=room_dataset,
         room_name=room
     )
-    _, n_mcs, n_lds, _ = physical_room.get_ems_rcs_number()
+    n_mcs = physical_room.transducer_number['mcs']
+    n_lds = physical_room.transducer_number['lds']
 
     # Virtual rooms
     fir_order = 2**8                   # FIR filter order
@@ -376,8 +377,8 @@ def dafx_figures_dafx24(args) -> None:
         nfft=nfft,
         f_c=9000
     )
-    plot_eq_curve(curve, samplerate, nfft)
-    plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [20,10000], irs_init.squeeze(), irs_opt.squeeze(), [20,20000], cmap='magma')
+    # plot_eq_curve(curve, samplerate, nfft)
+    plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [20,10000], irs_init[:,0].squeeze(), irs_opt[:,0].squeeze(), [20,20000], cmap='magma')
 
     return None
 
@@ -429,7 +430,7 @@ def dafx_figures_jaes24(args):
     )
     gbi = mag2db(res.compute_GBI())
     print(f'Initial GBI: {gbi:.2f} dB')
-    res.set_G(db2mag(gbi - 2))
+    res.set_G(db2mag(gbi))
 
     # ------------------- Initialization ----------------------
     evs_init = res.open_loop_eigenvalues()
@@ -466,7 +467,7 @@ if __name__ == '__main__':
     #---------------------- Training ----------------------
     parser.add_argument('--train_dir', type=str, help='directory to save training results')
     parser.add_argument('--max_epochs', type=int, default=20, help='maximum number of epochs')
-    parser.add_argument('--patience_delta', type=float, default=0.005, help='Minimum improvement in validation loss to be considered as an improvement')
+    parser.add_argument('--patience_delta', type=float, default=0.0001, help='Minimum improvement in validation loss to be considered as an improvement')
     #---------------------- Optimizer ---------------------
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     #----------------- Parse the arguments ----------------
@@ -485,4 +486,4 @@ if __name__ == '__main__':
         f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 
     # Run examples
-    dafx_figures_jaes24(args)
+    dafx_figures_PhRoom(args)

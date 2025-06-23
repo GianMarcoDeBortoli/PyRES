@@ -48,11 +48,12 @@ def plot_coupling(rirs: torch.Tensor, fs: int, decay_interval: str='T30', **kwar
     ec_db = 10*torch.log10(ec_norm)
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = sns.color_palette("magma")
 
     # plt.figure(figsize=(7,6))
     plt.figure()
 
-    image = plt.imshow(ec_db)
+    image = plt.imshow(ec_db, cmap=colorPalette)
     plt.ylabel('Microphone')
     plt.yticks(torch.arange(start=0, end=rirs.shape[1], step=5 if rirs.shape[1]>10 else 1).numpy(), labels=torch.arange(start=0, end=rirs.shape[1], step=5 if rirs.shape[1]>10 else 1).numpy())
     plt.xlabel('Loudspeaker')
@@ -76,9 +77,9 @@ def plot_coupling_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='
     ec_LA = energy_coupling(rirs_LA, fs=fs, decay_interval=decay_interval)
 
     ecs = torch.cat((torch.cat((ec_LM, ec_SM), dim=1), torch.cat((ec_LA, ec_SA), dim=1)), dim=0)
-    norm_value = torch.max(ecs)
-    ecs_norm = ecs/norm_value
-    ecs_db = 10*torch.log10(ecs_norm)
+    # norm_value = torch.max(ecs)
+    # ecs_norm = ecs/norm_value
+    ecs_db = 10*torch.log10(ecs)
 
     ecs_plot = [ecs_db[:ec_LM.shape[0], :ec_LM.shape[1]],
                 ecs_db[:ec_LM.shape[0], ec_LM.shape[1]:],
@@ -86,6 +87,7 @@ def plot_coupling_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='
                 ecs_db[ec_LM.shape[0]:, ec_LM.shape[1]:]]
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = plt.get_cmap("viridis")
     
     fig, axs = plt.subplots(
         nrows=2,
@@ -104,9 +106,9 @@ def plot_coupling_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='
     
     images = []
     for ax, data in zip(axs.flat, ecs_plot):
-        images.append(ax.imshow(data, norm=norm))
+        images.append(ax.imshow(data, norm=norm, cmap=colorPalette))
 
-    fig.colorbar(mappable=images[0], ax=axs, label='Magnitude in dB', aspect=10, pad=0.1)
+    fig.colorbar(mappable=images[0], ax=axs, label='Magnitude in dB', aspect=10, pad=0.03, ticks=[-40, -30, -20,-15, -10,-5, 0])
 
     labelpad = 20 if rirs_LM.shape[0]<10 else 10
     axs[0,0].set_ylabel('Mic', labelpad=labelpad)
@@ -169,9 +171,9 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
     drr_LA = direct_to_reverb_ratio(rirs_LA, fs=fs, decay_interval=decay_interval)
 
     drrs = torch.cat((torch.cat((drr_LM, drr_SM), dim=1), torch.cat((drr_LA, drr_SA), dim=1)), dim=0)
-    norm_value = torch.max(drrs)
-    drrs_norm = drrs/norm_value
-    drrs_db = 10*torch.log10(drrs_norm)
+    # norm_value = torch.max(drrs)
+    # drrs_norm = drrs/norm_value
+    drrs_db = 10*torch.log10(drrs)
 
     ecs_plot = [drrs_db[:drr_LM.shape[0], :drr_LM.shape[1]],
                 drrs_db[:drr_LM.shape[0], drr_LM.shape[1]:],
@@ -179,6 +181,7 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
                 drrs_db[drr_LM.shape[0]:, drr_LM.shape[1]:]]
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = plt.get_cmap("viridis")
     
     fig, axs = plt.subplots(
         nrows=2,
@@ -187,7 +190,7 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
         width_ratios=[drr_LM.shape[1], drr_SM.shape[1]],
         height_ratios=[drr_LM.shape[0], drr_LA.shape[0]],
         gridspec_kw={'wspace':0.05, 'hspace':0.1},
-        figsize=(drrs.shape[1]/2, drrs.shape[0]/2)
+        figsize=(8, 3)
     )
     # fig.suptitle('Direct to reverberant ratio')
 
@@ -197,9 +200,15 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
     
     images = []
     for ax, data in zip(axs.flat, ecs_plot):
-        images.append(ax.imshow(data, norm=norm))
+        images.append(ax.imshow(data, norm=norm, cmap=colorPalette))
 
-    fig.colorbar(mappable=images[0], ax=axs, label='Magnitude in dB', aspect=10, pad=0.1)
+    # fig.colorbar(mappable=images[0], ax=axs, label='Magnitude in dB', aspect=10, pad=0.1)
+    cbar=fig.colorbar(mappable=images[0], ax=axs, label='Magnitude in dB', aspect=10, pad=0.03, ticks=[-10, -5, 0, 5, 10, 15])
+    # cbar.set_label('Magnitude in dB', labelpad=20)
+    # Move the colorbar label further from the colorbar, specifically from the top
+    cbar.ax.yaxis.set_label_position('right')
+    cbar.ax.yaxis.label.set_verticalalignment('top')
+    cbar.ax.yaxis.label.set_position((0.2, 0.45))  # (x, y) in axes fraction; y > 1 moves label above the colorbar
 
     labelpad = 20 if rirs_LM.shape[0]<10 else 10
     axs[0,0].set_ylabel('Mic', labelpad=labelpad)
@@ -226,22 +235,32 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
 
 def plot_room_setup(room) -> None:
 
-    stage = torch.tensor(room.low_level_info['StageAndAudience']['StageEmitters']['Position_m'])
+    stage = torch.tensor([room.low_level_info['StageAndAudience']['StageEmitters']['Position_m'][0]])
     loudspeakers = torch.tensor(room.low_level_info['AudioSetup']['SystemEmitters']['Position_m'])
     microphones = torch.tensor(room.low_level_info['AudioSetup']['SystemReceivers']['Position_m'])
-    audience = torch.tensor(room.low_level_info['StageAndAudience']['AudienceReceivers']['MonochannelPosition_m'])
+    audience = torch.tensor([room.low_level_info['StageAndAudience']['AudienceReceivers-Mono']['Position_m'][0]])
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = [
+        "#E3C21C",
+        "#3364D7",
+        "#1AB759",
+        "#D51A43"
+    ]
 
     # Use constrained layout
-    fig = plt.figure(figsize=(9,4))
+    fig = plt.figure(figsize=(8,4))
 
     # 3D Plot
     ax_3d = fig.add_subplot(111, projection='3d')
-    ax_3d.scatter(*zip(*stage), marker='s', color='g', s=100, label='Stage emitters')
-    ax_3d.scatter(*zip(*loudspeakers), marker='s', color='b', s=100, label='System loudspeakers')
-    ax_3d.scatter(*zip(*microphones), marker='o', color='r', s=100, label='System microphones')
-    ax_3d.scatter(*zip(*audience), marker='o', color='y', s=100, label='Audience receivers')
+    ax_3d.xaxis.set_pane_color('white')
+    ax_3d.yaxis.set_pane_color('white')
+    ax_3d.zaxis.set_pane_color('white')
+
+    ax_3d.scatter(*zip(*stage), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
+    ax_3d.scatter(*zip(*loudspeakers), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
+    ax_3d.scatter(*zip(*microphones), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
+    ax_3d.scatter(*zip(*audience), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
 
     # Labels
     ax_3d.set_xlabel('x in meters', labelpad=15)
@@ -256,12 +275,12 @@ def plot_room_setup(room) -> None:
     ax_3d.set_box_aspect([room_x, room_y, room_z])
 
     # Plot orientation
-    ax_3d.view_init(28, 150)
+    ax_3d.view_init(39, 136)
 
     # Legend Plot
     ax_3d.legend(
         loc='center right',  # Center the legend in the legend plot
-        bbox_to_anchor=(2, 0.5),  # Position the legend outside the plot
+        bbox_to_anchor=(1.82, 0.5),  # Position the legend outside the plot
         handletextpad=0.1,
         borderpad=0.2,
         columnspacing=1.0,
@@ -271,7 +290,7 @@ def plot_room_setup(room) -> None:
 
     # Adjust layout
     fig.tight_layout()
-    fig.subplots_adjust(left=0.00, top=1.3, right=0.5, bottom=-0.1)
+    fig.subplots_adjust(left=0.0, top=1.4, right=0.55, bottom=-0.2)
     plt.show(block=True)
 
     return None
@@ -555,15 +574,16 @@ def plot_DAFx(unitary, firs, modal_reverb, fdn, poletti, fs, nfft):
         figsize=(6,10)
     )
     
-    axs[0].plot(t_axis, y1)
+    axs[0].plot(t_axis, y1, color='k', linewidth=1.5)
     # plt.xlabel('Time in seconds')
+    axs[0].set_ylim(-0.2, 1)
     axs[0].set_xlim(-0.001, 0.02)
     axs[0].tick_params(axis='both', which='both', labelsize=14)
     # axs[0].set_ylabel('Amplitude', labelpad=17)
     axs[0].set_title('Unitary mixing matrix')
     axs[0].grid()
 
-    axs[1].plot(t_axis, y2)
+    axs[1].plot(t_axis, y2, color='k', linewidth=1)
     # plt.xlabel('Time in seconds')
     axs[1].set_xlim(-0.001, 0.02)
     axs[1].tick_params(axis='both', which='both', labelsize=14)
@@ -571,7 +591,7 @@ def plot_DAFx(unitary, firs, modal_reverb, fdn, poletti, fs, nfft):
     axs[1].set_title('FIRs')
     axs[1].grid()
 
-    axs[2].plot(t_axis, y3)
+    axs[2].plot(t_axis, y3, color='k', linewidth=1)
     # plt.xlabel('Time in seconds')
     axs[2].set_xlim(-0.03, 1)
     axs[2].tick_params(axis='both', which='both', labelsize=14)
@@ -579,15 +599,16 @@ def plot_DAFx(unitary, firs, modal_reverb, fdn, poletti, fs, nfft):
     axs[2].set_title('Modal reverberator')
     axs[2].grid()
 
-    axs[3].plot(t_axis, y4)
+    axs[3].plot(t_axis, y4, color='k', linewidth=1.2)
     # plt.xlabel('Time in seconds')
     axs[3].set_xlim(-0.03, 1)
+    axs[3].set_ylim(-0.2, 0.4)
     axs[3].tick_params(axis='both', which='both', labelsize=14)
     # axs[3].set_ylabel('Amplitude')
     axs[3].set_title('FDN')
     axs[3].grid()
 
-    axs[4].plot(t_axis, y5)
+    axs[4].plot(t_axis, y5, color='k', linewidth=1.2)
     # axs[4].set_xlabel('Time in seconds')
     axs[4].set_xlim(-0.03, 1)
     axs[4].tick_params(axis='both', which='both', labelsize=14)
@@ -621,7 +642,8 @@ def plot_combined_figure(fs, nfft, evs_init, evs_opt, evs_f_range, ir_init, ir_o
     evs_opt = mag2db(get_magnitude(evs_opt[lower_f_lim:higher_f_lim,:]))
 
     plt.rcParams.update({'font.family': 'serif', 'font.size': 16, 'font.weight': 'heavy', 'text.usetex': True})
-    colors = ['xkcd:sky', 'coral', 'coral', "xkcd:mint green", "xkcd:mint green", "xkcd:light magenta", "xkcd:light magenta"]
+    # colors = ['xkcd:sky', 'coral', 'coral", "xkcd:mint green", "xkcd:mint green", "xkcd:light magenta", "xkcd:light magenta"]
+    colorPalette = sns.color_palette("pastel", n_colors=2).as_hex()
 
     # Create the figure and gridspec
     fig = plt.figure(figsize=(6.5, 3.5))
@@ -629,24 +651,25 @@ def plot_combined_figure(fs, nfft, evs_init, evs_opt, evs_f_range, ir_init, ir_o
 
     # Left subplot: Boxplot
     ax_box = fig.add_subplot(gs[:, 0])  # Use both rows for the boxplot
+    ax_box.grid(True)
     data = [evs_init.flatten().numpy(), evs_opt.flatten().numpy()]
     max_vals = [torch.max(evs_init.flatten()), torch.max(evs_opt.flatten())]
-    sns.boxplot(data=data, ax=ax_box, showfliers=False, palette=colors[0:2], boxprops=dict(edgecolor='k'),
-                medianprops=dict(color="k", linewidth=2))
-    ax_box.scatter([0,1], max_vals, marker="o", s=35, edgecolors='black', facecolors=colors[0:2])
+    sns.boxplot(data=data, ax=ax_box, width=0.6, showfliers=False, palette=colorPalette[0:2], boxprops=dict(edgecolor='k'),
+                medianprops=dict(color="k", linewidth=1.5), whiskerprops=dict(color="k"), capprops=dict(color='k'))
+    ax_box.scatter([0,1], max_vals, marker="o", s=20, edgecolors='black', facecolors='black')
     ax_box.set_xticks([0,1],["Init", "Opt"])
+    ax_box.set_xlim(-0.5, 1.5)
     ax_box.set_ylabel("Magnitude in dB")
-    ax_box.set_ylim(-45, 0)
     ax_box.set_yticks(ticks=[-40, -30, -20, -10, 0], labels=['-40', '-30', '-20', '-10', '0'])
+    ax_box.set_ylim(-45, 2)
     ax_box.tick_params(axis='y', labelsize=14)
-    ax_box.grid(True)
 
     # Right subplot: Spectrograms
     ax_spec1 = fig.add_subplot(gs[0, 2])  # Top spectrogram
     ax_spec2 = fig.add_subplot(gs[1, 2])  # Bottom spectrogram
 
     # Compute spectrograms
-    spec1, f1, t1 = mlab.specgram(ir_init.numpy(), NFFT=2**6, Fs=fs, noverlap=2**5)
+    spec1, f1, t1 = mlab.specgram(ir_init.numpy(), NFFT=2**6, Fs=fs, noverlap=2**5) # dafx: NFFT=2**11, Fs=fs, noverlap=2**10 / jaes: NFFT=2**6, Fs=fs, noverlap=2**5
     spec2, f2, t2 = mlab.specgram(ir_opt.numpy(), NFFT=2**6, Fs=fs, noverlap=2**5)
 
     # Normalize spectrograms
@@ -733,12 +756,13 @@ def plot_boxplot_spectrogram(subplot_spec, fig, nfft, fs, noverlap, evs, evs_lab
     """
     # Create a gridspec within the given subplot_spec
     gs = gridspec.GridSpecFromSubplotSpec(3, 5, subplot_spec=subplot_spec, height_ratios=[0.3, 2, 0.1], hspace=0.2, width_ratios=[4, 0.2, 0.2, 0.2, 0.3])
+    colorPalette = sns.color_palette("pastel", n_colors=2).as_hex()
     
     # Boxplot
     ax_box = fig.add_subplot(gs[0, :4])
-    sns.boxplot(x=evs.flatten().numpy(), ax=ax_box, showfliers=False, patch_artist=True, boxprops=dict(edgecolor='k', facecolor='xkcd:sky'), medianprops=dict(color="k", linewidth=2))
+    sns.boxplot(x=evs.flatten().numpy(), ax=ax_box, showfliers=False, patch_artist=True, boxprops=dict(edgecolor='k', facecolor=colorPalette[0]), medianprops=dict(color="k", linewidth=1.5), whiskerprops=dict(color="k"), capprops=dict(color='k'))
     max_outlier = evs.flatten().max().item()
-    ax_box.scatter([max_outlier], [0], marker="o", s=25, facecolors='lightblue', edgecolors='black', zorder=3)
+    ax_box.scatter([max_outlier], [0], marker="o", s=10, facecolors='k', edgecolors='black', zorder=3)
     ax_box.set_title("Magnitude in dB" if evs_label else "", fontsize=11)  # Move label above the boxplot
     ax_box.set_yticklabels([])
     ax_box.set_xlim(-55, 2)

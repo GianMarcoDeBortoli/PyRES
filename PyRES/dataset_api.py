@@ -245,19 +245,46 @@ def normalize_rirs(
             - torch.Tensor: Normalized room impulse responses bewteen system emitters and audience receivers.
             - torch.Tensor: Normalized room impulse responses bewteen system emitters and system receivers.
     """
-    # Energy coupling of the feedback path
-    ec_lm = energy_coupling(rir=sys_to_sys, fs=fs, decay_interval='T30')
-    dim = torch.mean(torch.tensor([ec_lm.shape[0], ec_lm.shape[1]], dtype=torch.float32)).int()
+    # Energy coupling
+    ec_stg_aud = energy_coupling(rir=stg_to_aud, fs=fs, decay_interval='T30')
+    ec_stg_sys = energy_coupling(rir=stg_to_sys, fs=fs, decay_interval='T30')
+    ec_sys_aud = energy_coupling(rir=sys_to_aud, fs=fs, decay_interval='T30')
+    ec_sys_sys = energy_coupling(rir=sys_to_sys, fs=fs, decay_interval='T30')
+    # dim = torch.mean(torch.tensor([ec_lm.shape[0], ec_lm.shape[1]], dtype=torch.float32)).int()
 
-    # Norm factor: the feedback path is normalized to a power gain equal to the mean dimension of the system
-    norm_factor = torch.sqrt(torch.sum(ec_lm)) / torch.sqrt(dim)
+    # Norm factor 1:
+    # norm_factor = torch.sqrt(torch.sum(ec_sys_sys)) / torch.sqrt(dim)
+    norm_stg = torch.sqrt(torch.mean(torch.hstack([ec_stg_aud.flatten(), ec_stg_sys.flatten()])))
+    norm_aud = torch.sqrt(torch.mean(torch.hstack([ec_sys_aud.flatten(), ec_stg_aud.flatten()])))
+    norm_lds = torch.sqrt(torch.mean(torch.hstack([ec_sys_aud.flatten(), ec_sys_sys.flatten()])))
+    norm_mcs = torch.sqrt(torch.mean(torch.hstack([ec_sys_sys.flatten(), ec_stg_sys.flatten()])))
 
-    # Normalization
+    # Normalization 1
+    stg_to_aud = stg_to_aud / (norm_stg * norm_aud)
+    stg_to_sys = stg_to_sys / (norm_stg * norm_mcs)
+    sys_to_aud = sys_to_aud / (norm_lds * norm_aud)
+    sys_to_sys = sys_to_sys / (norm_lds * norm_mcs)
+
+    # Energy coupling
+    ec_stg_aud = energy_coupling(rir=stg_to_aud, fs=fs, decay_interval='T30')
+    ec_stg_sys = energy_coupling(rir=stg_to_sys, fs=fs, decay_interval='T30')
+    ec_sys_aud = energy_coupling(rir=sys_to_aud, fs=fs, decay_interval='T30')
+    ec_sys_sys = energy_coupling(rir=sys_to_sys, fs=fs, decay_interval='T30')
+
+    # Norm factor 2
+    max_value = torch.sqrt(torch.max(torch.hstack([ec_stg_aud.flatten(), ec_stg_sys.flatten(), ec_sys_aud.flatten(), ec_sys_sys.flatten()])))
+
+    # Normalization 2
+    stg_to_aud = stg_to_aud / max_value
+    stg_to_sys = stg_to_sys / max_value
+    sys_to_aud = sys_to_aud / max_value
+    sys_to_sys = sys_to_sys / max_value
+
     rirs_norm = OrderedDict()
-    rirs_norm.update({'stg_to_aud': stg_to_aud / norm_factor})
-    rirs_norm.update({'stg_to_sys': stg_to_sys / norm_factor})
-    rirs_norm.update({'sys_to_aud': sys_to_aud / norm_factor})
-    rirs_norm.update({'sys_to_sys': sys_to_sys / norm_factor})
+    rirs_norm.update({'stg_to_aud': stg_to_aud})
+    rirs_norm.update({'stg_to_sys': stg_to_sys})
+    rirs_norm.update({'sys_to_aud': sys_to_aud})
+    rirs_norm.update({'sys_to_sys': sys_to_sys})
 
     return rirs_norm
 
