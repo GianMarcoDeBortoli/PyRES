@@ -42,7 +42,8 @@ def train_virtual_room(args) -> None:
         dataset_directory=room_dataset,
         room_name=room
     )
-    _, n_mcs, n_lds, _ = physical_room.get_ems_rcs_number()
+    n_mcs = physical_room.transducer_number['mcs']
+    n_lds = physical_room.transducer_number['lds']
 
     # Virtual room
     fir_order = 2**8                   # FIR filter order
@@ -118,7 +119,7 @@ def train_virtual_room(args) -> None:
     
     # ------------------------ Plots -------------------------
     plot_evs(evs_init, evs_opt, samplerate, nfft, 20, 8000)
-    plot_spectrograms(ir_init, ir_opt, samplerate, nfft=2**8, noverlap=2**7)
+    plot_spectrograms(ir_init, ir_opt, samplerate, nfft=2**9, noverlap=2**8)
 
     # ---------------- Save the model parameters -------------
     # If desired, you can use the following line to save the virtual room model state.

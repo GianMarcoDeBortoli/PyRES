@@ -433,7 +433,7 @@ def plot_evs(evs_init, evs_opt, fs: int, nfft: int, lower_f_lim: float, higher_f
     plt.show(block=True)
 
 
-def plot_spectrograms(y_1: torch.Tensor, y_2: torch.Tensor, fs: int, nfft: int=2**10, noverlap: int=2**8, label1='Initialized', label2='Optimized', title='System Impulse Response Spectrograms') -> None:
+def plot_spectrograms(y_1: torch.Tensor, y_2: torch.Tensor, y_3: torch.Tensor, fs: int, nfft: int=2**10, noverlap: int=2**8, label1='System off', label2='Initialized', label3='Optimized', title='System Impulse Response Spectrograms') -> None:
     r"""
     Plot the spectrograms of the system impulse responses at initialization and after optimization.
     
@@ -446,39 +446,51 @@ def plot_spectrograms(y_1: torch.Tensor, y_2: torch.Tensor, fs: int, nfft: int=2
             - label2 (str, optional): Label for the second signal. Defaults to 'Optimized'.
             - title (str, optional): Title of the plot. Defaults to 'System Impulse Response Spectrograms'.
     """
-    Spec_init,f,t = mlab.specgram(y_1.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
-    Spec_opt,_,_ = mlab.specgram(y_2.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
+    Spec_off,f,t = mlab.specgram(y_1.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
+    Spec_init,_,_ = mlab.specgram(y_2.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
+    Spec_opt,_,_ = mlab.specgram(y_3.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
 
-    max_val = max(Spec_init.max(), Spec_opt.max())
+    max_val = max(Spec_off.max(), Spec_init.max(), Spec_opt.max())
+    Spec_off = Spec_off/max_val
     Spec_init = Spec_init/max_val
     Spec_opt = Spec_opt/max_val
     
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
-    fig,axes = plt.subplots(2,1, sharex=False, sharey=True, figsize=(7,5), constrained_layout=True)
+    fig,axes = plt.subplots(3,1, sharex=False, sharey=True, figsize=(7,5), constrained_layout=True)
     
-    plt.subplot(2,1,1)
-    plt.pcolormesh(t, f, 10*np.log10(Spec_init), cmap='magma', vmin=-100, vmax=0)
-    plt.xlim(0, y_1.shape[0]/fs)
+    plt.subplot(3,1,1)
+    plt.pcolormesh(t, f, 10*np.log10(Spec_off), cmap='magma', shading='gouraud', vmin=-100, vmax=0)
+    plt.xlim(0, 1.5) #y_1.shape[0]/fs
+    plt.xticks([])
     plt.ylim(20, fs//2)
     plt.yscale('log')
-    plt.title(label1)
+    # plt.title(label1)
     plt.grid(False)
 
-    plt.subplot(2,1,2)
-    im = plt.pcolormesh(t, f, 10*np.log10(Spec_opt), cmap='magma', vmin=-100, vmax=0)
-    plt.xlim(0, y_1.shape[0]/fs)
+    plt.subplot(3,1,2)
+    im = plt.pcolormesh(t, f, 10*np.log10(Spec_init), cmap='magma', shading='gouraud', vmin=-100, vmax=0)
+    plt.xlim(0, 1.5)
+    plt.xticks([])
     plt.ylim(20, fs//2)
     plt.yscale('log')
-    plt.title(label2)
+    # plt.title(label2)
+    plt.grid(False)
+
+    plt.subplot(3,1,3)
+    plt.pcolormesh(t, f, 10*np.log10(Spec_opt), cmap='magma', shading='gouraud', vmin=-100, vmax=0)
+    plt.xlim(0, 1.5)
+    plt.ylim(20, fs//2)
+    plt.yscale('log')
+    # plt.title(label3)
     plt.grid(False)
 
     fig.supxlabel('Time in seconds')
     fig.supylabel('Frequency in Hz')
-    fig.suptitle(title)
+    # fig.suptitle(title)
 
     cbar = fig.colorbar(im, ax=axes[:], aspect=20)
-    cbar.set_label('Magnitude in dB')
+    cbar.set_label('Magnitude in dB', fontsize=24)
     ticks = np.arange(-100, 1, 20)
     cbar.ax.set_ylim(-100, 0)
     cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
@@ -619,6 +631,97 @@ def plot_DAFx(unitary, firs, modal_reverb, fdn, poletti, fs, nfft):
     fig.supxlabel('Time in seconds')
     fig.supylabel('Amplitude')
 
+    plt.show(block=True)
+
+    return None
+
+def plot_DAFx_2(unitary, firs, modal_reverb, fdn, poletti, fs):
+
+    n_samples = torch.max(torch.tensor([unitary.shape[0], firs.shape[0], modal_reverb.shape[0], fdn.shape[0], poletti.shape[0]]))
+    t_axis = torch.linspace(0, n_samples/fs, n_samples)
+    y1 = torch.zeros(n_samples,)
+    y1[:unitary.shape[0]] = unitary[:,0,0].squeeze()
+    y1 = y1/torch.max(torch.abs(unitary))
+    y2 = torch.zeros(n_samples,)
+    y2[:firs.shape[0]] = firs[:,0,0].squeeze()
+    y2 = y2/torch.max(torch.abs(firs))
+    y3 = torch.zeros(n_samples,)
+    modal_reverb_resample = torchaudio.transforms.Resample(orig_freq=1000, new_freq=fs)(modal_reverb[:,0,0])
+    y3[:modal_reverb_resample.shape[0]] = modal_reverb_resample.squeeze()
+    y3 = y3/torch.max(torch.abs(modal_reverb_resample))/4
+    y4 = torch.zeros(n_samples,)
+    y4[:fdn.shape[0]] = fdn[:,0,0].squeeze()
+    y4 = y4/torch.max(torch.abs(fdn))
+    y5 = torch.zeros(n_samples,)
+    y5[:poletti.shape[0]] = poletti[:,0,0].squeeze()
+    y5 = y5/torch.max(torch.abs(poletti))/2
+
+    plt.rcParams.update({'font.family':'serif', 'font.size':16, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = sns.color_palette("muted", n_colors=5)
+    
+    fig, axs = plt.subplots(
+        nrows=2,
+        ncols=1,
+        layout="constrained",
+        gridspec_kw={'hspace':0},
+        height_ratios=[2,3],
+        figsize=(6,5)
+    )
+    
+    axs[0].plot(t_axis, y1, color=colorPalette[0], linewidth=1.5)
+    # plt.xlabel('Time in seconds')
+    # axs[0].set_ylim(-0.2, 1)
+    axs[0].set_xlim(-0.001, 0.02)
+    axs[0].tick_params(axis='both', which='both', labelsize=14)
+    # axs[0].set_ylabel('Amplitude', labelpad=17)
+    # axs[0].set_title('Unitary mixing matrix')
+    axs[0].grid()
+
+    axs[0].plot(t_axis, y2-0.8, color=colorPalette[1], linewidth=1.5)
+    # plt.xlabel('Time in seconds')
+    axs[0].set_xlim(-0.001, 0.02)
+    axs[0].set_xticks([0, 0.005, 0.010, 0.015, 0.020])
+    axs[0].set_yticks([0, -0.8])
+    axs[0].set_yticklabels(['Mixing matrix', 'Short FIR'])
+    axs[0].tick_params(axis='both', which='both', labelsize=14)
+    # axs[1].set_ylabel('Amplitude')
+    # axs[0].set_title('FIRs')
+    axs[0].grid(True)
+
+    # axs[0].legend(loc='right')
+
+    axs[1].plot(t_axis, y3, color=colorPalette[2], linewidth=1.5)
+    # plt.xlabel('Time in seconds')
+    axs[1].set_xlim(-0.03, 1)
+    axs[1].tick_params(axis='both', which='both', labelsize=14)
+    # axs[2].set_ylabel('Amplitude')
+    # axs[1].set_title('Modal reverberator')
+    axs[1].grid()
+
+    axs[1].plot(t_axis, y4-0.6, color=colorPalette[3], linewidth=1.5)
+    # plt.xlabel('Time in seconds')
+    axs[1].set_xlim(-0.03, 1)
+    # axs[1].set_ylim(-0.2, 0.4)
+    axs[1].tick_params(axis='both', which='both', labelsize=14)
+    # axs[3].set_ylabel('Amplitude')
+    # axs[1].set_title('FDN')
+    axs[1].grid()
+
+    axs[1].plot(t_axis, y5-1.2, color=colorPalette[4], linewidth=1.5)
+    # axs[4].set_xlabel('Time in seconds')
+    axs[1].set_xlim(-0.03, 1)
+    axs[1].set_yticks([0, -0.6, -1.2])
+    axs[1].set_yticklabels(['Modal reverb', 'FDN', 'Unitary reverb'])
+    axs[1].tick_params(axis='both', which='both', labelsize=14)
+    # axs[4].set_ylabel('Amplitude')
+    # axs[1].set_title('Unitary reverberator')
+    axs[1].grid()
+
+    # axs[1].legend(loc='right')
+
+    fig.supxlabel('Time in seconds')
+    # fig.supylabel('Amplitude')
+    plt.subplots_adjust(hspace=0)
     plt.show(block=True)
 
     return None

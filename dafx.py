@@ -134,7 +134,7 @@ def dafx_figures_VrRoom(args) -> None:
     test = system.Shell(core=ur)
     ur_rirs = test.get_time_response(identity=True).squeeze()
 
-    plot_DAFx(mm_rirs, firs_rirs, mr_rirs, fdn_rirs, ur_rirs, samplerate, nfft)
+    plot_DAFx_2(mm_rirs, firs_rirs, mr_rirs, fdn_rirs, ur_rirs, samplerate)
     
     return None
 
@@ -165,23 +165,25 @@ def dafx_big_figure(args) -> None:
     n_mcs = physical_room1.transducer_number['mcs']
     n_lds = physical_room1.transducer_number['lds']
 
+    off11 = physical_room1.get_stg_to_aud().param.data.squeeze()
+
     # Virtual rooms per room 1
     firs1, fdn1, mm1, mr1, ur1 = all_dsps(n_mcs, n_lds, samplerate, nfft, alias_decay_db)
 
     res11 = RES(physical_room=physical_room1, virtual_room=mm1)
-    aur11 = res11.system_simulation()[:,0].squeeze()
+    aur11 = res11.system_simulation().squeeze()
     evs11 = mag2db(res11.open_loop_eigenvalues())[idx1:idx2,:]
 
     res21 = RES(physical_room=physical_room1, virtual_room=firs1)
-    aur21 = res21.system_simulation()[:,0].squeeze()
+    aur21 = res21.system_simulation().squeeze()
     evs21 = mag2db(res21.open_loop_eigenvalues())[idx1:idx2,:]
 
     res31 = RES(physical_room=physical_room1, virtual_room=fdn1)
-    aur31 = res31.system_simulation()[:,0].squeeze()
+    aur31 = res31.system_simulation().squeeze()
     evs31 = mag2db(res31.open_loop_eigenvalues())[idx1:idx2,:]
 
     res41 = RES(physical_room=physical_room1, virtual_room=ur1)
-    aur41 = res41.system_simulation()[:,0].squeeze()
+    aur41 = res41.system_simulation().squeeze()
     evs41 = mag2db(res41.open_loop_eigenvalues())[idx1:idx2,:]
 
     physical_room1_resampled = PhRoom_dataset(
@@ -192,7 +194,7 @@ def dafx_big_figure(args) -> None:
         room_name=room1
     )
     res51 = RES(physical_room=physical_room1_resampled, virtual_room=mr1)
-    aur51 = res51.system_simulation()[:,0].squeeze()
+    aur51 = res51.system_simulation().squeeze()
     evs51 = mag2db(res51.open_loop_eigenvalues())[2*50:2*450,:]
 
     # Physical room 2
@@ -328,7 +330,7 @@ def dafx_figures_dafx24(args) -> None:
 
     # Physical room
     room_dataset = './dataRES'      # Path to the dataset
-    room = 'Otala'                  # Path to the room impulse responses
+    room = 'GLivelab-Tampere'                  # Path to the room impulse responses
     physical_room = PhRoom_dataset(
         fs=samplerate,
         nfft=nfft,
@@ -338,6 +340,8 @@ def dafx_figures_dafx24(args) -> None:
     )
     n_mcs = physical_room.transducer_number['mcs']
     n_lds = physical_room.transducer_number['lds']
+    irs_off = physical_room.get_stg_to_aud().param.data[:,0,0].squeeze()
+    irs_off = torch.cat([irs_off, torch.zeros(nfft - irs_off.shape[0],)+1e-10], dim=0)
 
     # Virtual rooms
     fir_order = 2**8                   # FIR filter order
@@ -356,14 +360,14 @@ def dafx_figures_dafx24(args) -> None:
         virtual_room=virtual_room
     )
     gbi = mag2db(res.compute_GBI())
-    res.set_G(db2mag(gbi-1))
+    res.set_G(db2mag(gbi+1))
 
     # ------------------- Initialization ----------------------
     evs_init = res.open_loop_eigenvalues()
     irs_init = res.system_simulation()
 
     # -------------------- Optimization -----------------------
-    virtual_room.load_state_dict(torch.load('./model_states/FIRs_Otala.pt'))
+    virtual_room.load_state_dict(torch.load('./model_states/FIRs_Tampere.pt'))
     # gbi = mag2db(res.compute_GBI())
     # res.set_G(db2mag(gbi-2))
     evs_opt = res.open_loop_eigenvalues()
@@ -378,8 +382,9 @@ def dafx_figures_dafx24(args) -> None:
         f_c=9000
     )
     # plot_eq_curve(curve, samplerate, nfft)
-    plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [20,10000], irs_init[:,0].squeeze(), irs_opt[:,0].squeeze(), [20,20000], cmap='magma')
+    # plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [20,10000], irs_init.squeeze(), irs_opt.squeeze(), [20,20000], cmap='magma')
 
+    plot_spectrograms(y_1=irs_off, y_2=irs_init[:,0], y_3=irs_opt[:,0], fs=samplerate, nfft=2**9, noverlap=2**8)
     return None
 
 def dafx_figures_jaes24(args):
@@ -486,4 +491,4 @@ if __name__ == '__main__':
         f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 
     # Run examples
-    dafx_figures_PhRoom(args)
+    dafx_figures_dafx24(args)
