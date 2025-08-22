@@ -384,7 +384,18 @@ def dafx_figures_dafx24(args) -> None:
     # plot_eq_curve(curve, samplerate, nfft)
     # plot_combined_figure(samplerate, nfft, evs_init, evs_opt, [20,10000], irs_init.squeeze(), irs_opt.squeeze(), [20,20000], cmap='magma')
 
-    plot_spectrograms(y_1=irs_off, y_2=irs_init[:,0], y_3=irs_opt[:,0], fs=samplerate, nfft=2**9, noverlap=2**8)
+    # plot_spectrograms(y_1=irs_off, y_2=irs_init[:,0], y_3=irs_opt[:,0], fs=samplerate, nfft=2**9, noverlap=2**8)
+
+    plot_evs_curve(evs=evs_init[:,0], fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_opt[:,0]*db2mag(-5), fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_opt[:,0], fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_init[:,1], fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_opt[:,1]*db2mag(+3), fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_opt[:,1], fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_init[:,2], fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+    plot_evs_curve(evs=evs_opt[:,2], fs=samplerate, nfft=nfft, lower_f_lim=10, higher_f_lim=10000)
+
+
     return None
 
 def dafx_figures_jaes24(args):

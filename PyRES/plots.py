@@ -18,6 +18,35 @@ from PyRES.metrics import energy_coupling, direct_to_reverb_ratio
 # ==================================================================
 # ========================== PHYSICAL ROOM =========================
 
+def plot_evs_curve(evs: torch.Tensor, fs: int, nfft: int, lower_f_lim: float, higher_f_lim: float, **kwargs) -> None:
+    r"""
+    Plot the eigenvalue curve of the given eigenvalues.
+
+        **Args**:
+            evs (torch.Tensor): Eigenvalues to plot.
+            fs (int): Sampling frequency.
+            nfft (int): FFT size.
+            lower_f_lim (float): Lower frequency limit for the plot.
+            higher_f_lim (float): Higher frequency limit for the plot.
+    """
+    idx1 = int(nfft/fs * lower_f_lim)
+    idx2 = int(nfft/fs * higher_f_lim)
+    f_axis = torch.linspace(0, fs/2, nfft//2+1)[idx1:idx2]
+    evs_db = mag2db(get_magnitude(evs[idx1:idx2]))
+
+    plt.rcParams.update({'font.family':'serif', 'font.size':25, 'font.weight':'heavy', 'text.usetex':True})
+    plt.figure(figsize=(7,4))
+    plt.plot(f_axis, evs_db)
+    plt.xscale('log')
+    plt.xlabel('Frequency in Hz')
+    plt.ylabel('Magnitude in dB')
+    plt.xlim(lower_f_lim, higher_f_lim)
+    plt.xticks([10,100,1000,10000], ['10','100','1k','10k'])
+    plt.ylim(-50, 10)
+    plt.grid()
+    plt.tight_layout()
+    plt.show(block=True)
+
 def unpack_kwargs(kwargs):
     for k, v in kwargs.items():
         match k:
