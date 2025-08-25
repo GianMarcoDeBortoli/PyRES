@@ -28,16 +28,18 @@
       height: 400px;
     }
     .images-container {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 15px;
-    }
-    .images-container img {
-      max-width: 48%;
-      height: auto;
-      border-radius: 4px;
-      box-shadow: 0 0 5px #ccc;
-    }
+    display: flex;
+    flex-direction: column;  /* vertically stack children */
+    align-items: center;     /* optional: center images horizontally */
+    margin-top: 15px;
+  }
+  .images-container img {
+    max-width: 80%;      /* optional: size control */
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 0 5px #ccc;
+    margin-bottom: 10px; /* space between images */
+  }
   </style>
 </head>
 <body>
@@ -46,10 +48,8 @@
   <div class="plot-container" id="plot1">
     <div class="plot-title">Otala</div> 
     <div id="plot1-div" class="plot"></div>
-    <div class="image1-container">
+    <div class="images-container">
       <img src="OtalaEnergy.png" alt="Image 1a" />
-    </div>
-    <div class="image2-container">
       <img src="OtalaDRR.png" alt="Image 1b" />
     </div>
   </div>
