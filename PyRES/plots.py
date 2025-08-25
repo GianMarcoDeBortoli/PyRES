@@ -20,6 +20,7 @@ from PyRES.metrics import energy_coupling, direct_to_reverb_ratio
 # ==================================================================
 import plotly.graph_objects as go
 import json
+import copy
 
 def plot_room_setup_plotly(positions):
     colorPalette = [
@@ -91,23 +92,23 @@ def plot_room_setup_plotly(positions):
 
     fig = go.Figure(data=data)
     fig.update_layout(
-        title='Room setup',
         scene=dict(
             xaxis=dict(range=x_range, title='x in meters'),
             yaxis=dict(range=y_range, title='y in meters'),
             zaxis=dict(range=z_range, title='z in meters'),
             aspectmode='manual',
-            aspectratio=dict(x=(xmax-xmin)/5.0, y=(ymax-ymin)/5.0, z=zmax/5.0)
+            aspectratio=dict(x=(xmax-xmin)/3.0, y=(ymax-ymin)/3.0, z=zmax/3.0)
         ),
-        legend=dict(
-            x=1.05,          # Move more to the right (default is about 1.02)
-            y=1,             # Keep it at the top
-            xanchor='left',  # Anchor the left side of the legend box at 'x'
-            yanchor='top',   # Anchor the top of the legend box at 'y'
-            bordercolor='black',
-            borderwidth=1,
-            bgcolor='rgba(255,255,255,0.8)'
-        )
+        showlegend=False,
+        # legend=dict(
+        #     x=1.05,          # Move more to the right (default is about 1.02)
+        #     y=1,             # Keep it at the top
+        #     xanchor='left',  # Anchor the left side of the legend box at 'x'
+        #     yanchor='top',   # Anchor the top of the legend box at 'y'
+        #     bordercolor='black',
+        #     borderwidth=1,
+        #     bgcolor='rgba(255,255,255,0.8)'
+        # )
     )
 
     fig.show()
