@@ -15,6 +15,101 @@ from flamo.functional import mag2db, get_magnitude
 # PyRES
 from PyRES.metrics import energy_coupling, direct_to_reverb_ratio
 
+
+
+# ==================================================================
+import plotly.graph_objects as go
+import json
+
+def plot_room_setup_plotly(positions):
+    colorPalette = [
+        "#E3C21C",
+        "#3364D7",
+        "#1AB759",
+        "#D51A43"
+    ]
+
+    data = []
+
+    stg = positions['stg']
+    mcs = positions['mcs']
+    lds = positions['lds']
+    aud = positions['aud']
+
+    if stg == None: stg = torch.tensor([])
+    else: stg = torch.tensor(positions['stg'])
+    if mcs == None: mcs = torch.tensor([])
+    else: mcs = torch.tensor(positions['mcs'])
+    if lds == None: lds = torch.tensor([])
+    else: lds = torch.tensor(positions['lds'])
+    if aud == None: aud = torch.tensor([])
+    else: aud = torch.tensor(positions['aud'])
+
+    if len(stg) != 0:
+        data.append(go.Scatter3d(
+            x=stg[:,0], y=stg[:,1], z=stg[:,2],
+            mode='markers',
+            marker=dict(size=7, color=colorPalette[0], symbol='square'),
+            name='Stage emitters'
+        ))
+    if len(lds) != 0:
+        data.append(go.Scatter3d(
+            x=lds[:,0], y=lds[:,1], z=lds[:,2],
+            mode='markers',
+            marker=dict(size=7, color=colorPalette[1], symbol='square'),
+            name='System loudspeakers'
+        ))
+    if len(mcs) != 0:
+        data.append(go.Scatter3d(
+            x=mcs[:,0], y=mcs[:,1], z=mcs[:,2],
+            mode='markers',
+            marker=dict(size=7, color=colorPalette[2], symbol='circle'),
+            name='System microphones'
+        ))
+    if len(aud) != 0:
+        data.append(go.Scatter3d(
+            x=aud[:,0], y=aud[:,1], z=aud[:,2],
+            mode='markers',
+            marker=dict(size=7, color=colorPalette[3], symbol='circle'),
+            name='Audience receivers'
+        ))
+
+    all_points = torch.cat([stg,mcs,lds,aud], dim=0)
+    if all_points.shape[0] == 0:
+        print("No data to plot")
+        return
+    
+    # Calculate min and max for each axis
+    xmin, ymin, zmin = torch.min(all_points, dim=0).values.tolist()
+    xmax, ymax, zmax = torch.max(all_points, dim=0).values.tolist()
+
+    # Calculate ranges (optionally add margins)
+    margin = 0.5
+    x_range = [xmin - margin, xmax + margin]
+    y_range = [ymin - margin, ymax + margin]
+    z_range = [0, zmax + margin]
+
+    fig = go.Figure(data=data)
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(range=x_range, title='x in meters'),
+            yaxis=dict(range=y_range, title='y in meters'),
+            zaxis=dict(range=z_range, title='z in meters'),
+            aspectmode='manual',
+            aspectratio=dict(x=(xmax-xmin)/5.0, y=(ymax-ymin)/5.0, z=zmax/5.0)
+        ),
+        legend=dict(x=0, y=1)
+    )
+
+    fig.show()
+
+    # Save to JSON file
+    filename_prefix = "OtalaSetup"
+    fig_json = fig.to_dict()
+    with open(f"{filename_prefix}.json", "w") as f:
+        json.dump(fig_json, f)
+
+
 # ==================================================================
 # ========================== PHYSICAL ROOM =========================
 

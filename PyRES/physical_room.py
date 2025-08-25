@@ -19,8 +19,9 @@ from PyRES.dataset_api import (
 )
 from PyRES.plots import (
     plot_room_setup,
-    plot_coupling,
-    plot_DRR
+    plot_coupling_pro_version,
+    plot_DRR_pro_version,
+    plot_room_setup_plotly
 )
 
 
@@ -213,24 +214,25 @@ class PhRoom(object):
         r"""
         Plots the room setup.
         """
-        stg = self.transducer_positions['stg']
-        mcs = self.transducer_positions['mcs']
-        lds = self.transducer_positions['lds']
-        aud = self.transducer_positions['aud']
+        # stg = self.transducer_positions['stg']
+        # mcs = self.transducer_positions['mcs']
+        # lds = self.transducer_positions['lds']
+        # aud = self.transducer_positions['aud']
 
-        plot_room_setup(stg=stg, mcs=mcs, lds=lds, aud=aud)
+        # plot_room_setup(stg=stg, mcs=mcs, lds=lds, aud=aud)
+        plot_room_setup_plotly(self.transducer_positions)
     
     def plot_coupling(self) -> None:
         r"""
         Plots the room coupling.
         """
-        plot_coupling(rirs=self.get_rirs(), fs=self.fs)
+        plot_coupling_pro_version(rirs=self.get_rirs(), fs=self.fs)
     
     def plot_DRR(self) -> None:
         r"""
         Plots the direct-to-reverberant ratio (DRR).
         """
-        plot_DRR(rirs=self.get_rirs(), fs=self.fs)
+        plot_DRR_pro_version(rirs=self.get_rirs(), fs=self.fs)
 
 
 # ==================================================================
