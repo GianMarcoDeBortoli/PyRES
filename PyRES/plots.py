@@ -91,6 +91,7 @@ def plot_room_setup_plotly(positions):
 
     fig = go.Figure(data=data)
     fig.update_layout(
+        title='Room setup',
         scene=dict(
             xaxis=dict(range=x_range, title='x in meters'),
             yaxis=dict(range=y_range, title='y in meters'),
@@ -222,7 +223,7 @@ def plot_coupling_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='
         gridspec_kw={'wspace':0.05, 'hspace':0.1},
         figsize=(ecs.shape[1]/2, ecs.shape[0]/2)
     )
-    # fig.suptitle('Energy coupling')
+    fig.suptitle('Energy coupling')
 
     max_value = torch.max(ecs_db)
     min_value = torch.min(ecs_db)
@@ -316,7 +317,7 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
         gridspec_kw={'wspace':0.05, 'hspace':0.1},
         figsize=(8, 3)
     )
-    # fig.suptitle('Direct to reverberant ratio')
+    fig.suptitle('Direct to reverberant ratio')
 
     max_value = torch.max(drrs_db)
     min_value = torch.min(drrs_db)
