@@ -99,16 +99,17 @@ def plot_room_setup_plotly(positions):
             aspectmode='manual',
             aspectratio=dict(x=(xmax-xmin)/3.0, y=(ymax-ymin)/3.0, z=zmax/3.0)
         ),
-        showlegend=False,
-        # legend=dict(
-        #     x=1.05,          # Move more to the right (default is about 1.02)
-        #     y=1,             # Keep it at the top
-        #     xanchor='left',  # Anchor the left side of the legend box at 'x'
-        #     yanchor='top',   # Anchor the top of the legend box at 'y'
-        #     bordercolor='black',
-        #     borderwidth=1,
-        #     bgcolor='rgba(255,255,255,0.8)'
-        # )
+        legend=dict(
+            x=1.05,          # Move more to the right (default is about 1.02)
+            y=1,             # Keep it at the top
+            xanchor='left',  # Anchor the left side of the legend box at 'x'
+            yanchor='top',   # Anchor the top of the legend box at 'y'
+            bordercolor='black',
+            borderwidth=1,
+            bgcolor='rgba(255,255,255,0.8)',
+            orientation='v',
+            font=dict(size=20),
+        )
     )
 
     fig.show()
