@@ -116,7 +116,7 @@ def plot_room_setup_plotly(positions):
     fig.show()
 
     # Save to JSON file
-    filename_prefix = "ImmersiveLabSetup"
+    filename_prefix = "GLivelabTampereiSetup"
     fig_json = fig.to_dict()
     with open(f"{filename_prefix}.json", "w") as f:
         json.dump(fig_json, f)

@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     # Physical room
     room_dataset = './dataRES'      # Path to the dataset
-    room = 'ImmersiveLab'                  # Path to the room impulse responses
+    room = 'GLivelab-Tampere'                  # Path to the room impulse responses
     physical_room = PhRoom_dataset(
         fs=samplerate,
         nfft=nfft,
