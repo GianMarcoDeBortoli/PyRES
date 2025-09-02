@@ -10,6 +10,10 @@ from flamo.functional import find_onset
 # PyRES
 from PyRES.utils import expand_to_dimension
 
+from torch.nn.functional import max_pool1d
+#Scipy
+from scipy.signal import find_peaks
+
 
 # ==================================================================
 
@@ -48,17 +52,80 @@ def energy_coupling(rir: torch.Tensor, fs: int, decay_interval: str='T30') -> to
 
     rir = expand_to_dimension(rir, 3)
     
+    # ec = torch.zeros(rir.shape[1:])
+    # for i in range(rir.shape[1]):
+    #     for j in range(rir.shape[2]):
+    #         r = rir[:,i,j]
+    #         index1 = find_onset(r)
+    #         rt = reverb_time(r, fs=fs, decay_interval=decay_interval)
+    #         index2 = (index1 + fs*rt).long()
+    #         r_cut = r[index1:index2]
+    #         ec[i,j] = torch.sum(torch.square(r_cut))
+
+    prev_rt = reverb_time(rir[:,0,0], fs=fs, decay_interval='T20')
+    
     ec = torch.zeros(rir.shape[1:])
     for i in range(rir.shape[1]):
         for j in range(rir.shape[2]):
             r = rir[:,i,j]
-            index1 = find_onset(r)
+            index1 = find_direct_path(r, fs=fs)
             rt = reverb_time(r, fs=fs, decay_interval=decay_interval)
+            if (torch.isnan(rt) and decay_interval == 'T30') or rt > 1.5*prev_rt:
+                rt = reverb_time(r, fs=fs, decay_interval='T20')
+            if torch.isnan(rt):
+                print(f"Warning: Could not compute reverberation time for mic {i+1}, speaker {j+1}. Using previous rir value.")
+                rt = prev_rt
             index2 = (index1 + fs*rt).long()
             r_cut = r[index1:index2]
             ec[i,j] = torch.sum(torch.square(r_cut))
+            prev_rt = rt
 
     return ec
+
+def find_direct_path(rir: torch.Tensor, fs: int) -> int:
+    f"""
+    Detects the direct path onset in a room impulse response.
+
+        **Parameters**:
+            - rir (torch.Tensor): Room impulse response (1D tensor).
+            - fs (int): Sampling rate (Hz)
+
+        **Returns**:
+            - direct_index (int): Sample index of estimated direct path
+    """
+
+    rir = rir.clone().detach()
+    rir_abs = rir.abs()
+
+    # Envelope approximation using max filter (peak envelope)
+    kernel_size = 10
+    pad = kernel_size // 2
+    env = max_pool1d(rir_abs.view(1, 1, -1), kernel_size=kernel_size, stride=1, padding=pad)[0, 0]
+
+    env_threshold = 0.5 * torch.max(env).item()
+    peaks_env, properties_env = find_peaks(env.numpy(), height=env_threshold)
+    
+    if len(peaks_env) == 0:
+        raise RuntimeError("No peaks found in the envelope.")
+
+    env_peak_loc = peaks_env[0]
+    env_peak_width = int(0.8 * properties_env["widths"][0]) if "widths" in properties_env else 20
+    start = max(0, env_peak_loc - env_peak_width)
+    end = min(len(rir), env_peak_loc + env_peak_width)
+    env_peak_interval = torch.arange(start, end)
+
+    # Now find actual peak within the envelope region
+    rir_segment = rir_abs[env_peak_interval]
+    rir_threshold = 0.5 * torch.max(rir_segment).item()
+    peaks_h, _ = find_peaks(rir_segment.numpy(), height=rir_threshold)
+
+    if len(peaks_h) == 0:
+        raise RuntimeError("No peaks found in the impulse response segment.")
+
+    delay = int(env_peak_interval[0].item() + peaks_h[0])
+
+    return delay
+
 
 def direct_to_reverb_ratio(rir: torch.Tensor, fs: int, decay_interval: str='T30') -> torch.Tensor:
     f"""
@@ -74,18 +141,25 @@ def direct_to_reverb_ratio(rir: torch.Tensor, fs: int, decay_interval: str='T30'
     """
 
     rir = expand_to_dimension(rir, 3)
+    prev_rt = reverb_time(rir[:,0,0], fs=fs, decay_interval='T20')
 
     drr = torch.zeros(rir.shape[1:])
     for i in range(rir.shape[1]):
         for j in range(rir.shape[2]):
             r = rir[:,i,j]
-            index1 = find_onset(r)
+            index1 = find_direct_path(r, fs=fs)
             index2 = (index1 + fs*torch.tensor([0.005])).long()
             rt = reverb_time(r, fs=fs, decay_interval=decay_interval)
+            if (torch.isnan(rt) and decay_interval == 'T30') or rt > 1.5*prev_rt:
+                rt = reverb_time(r, fs=fs, decay_interval='T20')
+            if torch.isnan(rt):
+                print(f"Warning: Could not compute reverberation time for mic {i+1}, speaker {j+1}. Using default value of 0.5 seconds.")
+                rt = prev_rt
             index3 = (index1 + fs*rt).long()
             direct = torch.sum(torch.square(r[index1:index2]))
             reverb = torch.sum(torch.square(r[index2:index3]))
             drr[i,j] = direct/reverb
+            prev_rt = rt
 
     return drr
 

@@ -219,8 +219,8 @@ class PhRoom(object):
         # lds = self.transducer_positions['lds']
         # aud = self.transducer_positions['aud']
 
-        # plot_room_setup(stg=stg, mcs=mcs, lds=lds, aud=aud)
-        plot_room_setup_plotly(self.transducer_positions)
+        plot_room_setup(self.transducer_positions)
+        # plot_room_setup_plotly(self.transducer_positions)
     
     def plot_coupling(self) -> None:
         r"""

@@ -93,7 +93,7 @@ def dafx_figures_PhRoom(args) -> None:
 
     # Physical room
     room_dataset = './dataRES'      # Path to the dataset
-    room = 'Otala'                  # Path to the room impulse responses
+    room = 'GLivelab-Tampere'                  # Path to the room impulse responses
     physical_room = PhRoom_dataset(
         fs=samplerate,
         nfft=nfft,
@@ -101,11 +101,40 @@ def dafx_figures_PhRoom(args) -> None:
         dataset_directory=room_dataset,
         room_name=room
     )
-    plot_room_setup(physical_room)
+    # physical_room.plot_setup()
 
     ph_rirs = physical_room.get_rirs()
-    plot_coupling_pro_version(rirs=ph_rirs, fs=samplerate)
-    plot_DRR_pro_version(rirs=ph_rirs, fs=samplerate)
+    # plot_coupling_pro_version(rirs=ph_rirs, fs=samplerate)
+    # plot_DRR_pro_version(rirs=ph_rirs, fs=samplerate)
+
+    Spec,f,t = mlab.specgram(ph_rirs['h_SA'][:,0,0].detach().squeeze().numpy(), NFFT=2**11, Fs=samplerate, noverlap=2**9)
+    
+    max_val = Spec.max()
+    Spec = Spec/max_val
+    
+    plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    fig = plt.figure()
+    
+    im = plt.pcolormesh(t, f, 10*np.log10(Spec), cmap='magma', shading='gouraud', vmin=-100, vmax=0)
+    plt.xlim(0, ph_rirs['h_SA'][:,0,0].shape[0]/samplerate) #y_1.shape[0]/fs
+    plt.ylim(20, samplerate//2)
+    plt.yscale('log')
+    # plt.title(label1)
+    plt.grid(False)
+
+    plt.xlabel('Time in seconds')
+    plt.ylabel('Frequency in Hz')
+    plt.title('Spectrogram of one RIR from stage to audience')
+
+    cbar = fig.colorbar(im, aspect=20)
+    cbar.set_label('Magnitude in dB', fontsize=24)
+    ticks = np.arange(-100, 1, 20)
+    cbar.ax.set_ylim(-100, 0)
+    cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
+
+    plt.tight_layout()
+
+    plt.show(block=True)
 
     return None
 
@@ -502,4 +531,4 @@ if __name__ == '__main__':
         f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 
     # Run examples
-    dafx_figures_dafx24(args)
+    dafx_figures_PhRoom(args)

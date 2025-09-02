@@ -31,6 +31,10 @@
         font-weight: bold;
         text-align: center;
     }
+    .missing-image {
+        font-weight: bold;
+        text-align: center;
+    }
     .images-container {
         display: flex;
         flex-direction: column;
@@ -69,8 +73,9 @@
     </div>
     <div id="plot1-div" class="plot"></div>
     <div class="images-container">
-      <img src="OtalaEnergy.png" alt="Image 1a" />
-      <img src="OtalaDRR.png" alt="Image 1b" />
+      <img src="OtalaSpec.png" alt="Image 1a" />
+      <img src="OtalaEnergy.png" alt="Image 1b" />
+      <img src="OtalaDRR.png" alt="Image 1c" />
     </div>
   </div>
 
@@ -81,20 +86,35 @@
     </div>
     <div id="plot2-div" class="plot"></div>
     <div class="images-container">
-      <img src="ImmersiveLabEnergy.png" alt="Image 2a" />
-      <img src="ImmersiveLabDRR.png" alt="Image 2b" />
+      <img src="ImmersiveLabSpec.png" alt="Image 2a" />
+      <img src="ImmersiveLabEnergy.png" alt="Image 2b" />
+      <img src="ImmersiveLabDRR.png" alt="Image 2c" />
     </div>
   </div>
 
-  <div class="plot-container" id="plot4">
+  <div class="plot-container" id="plot3">
     <div class="plot-title">GLivelab-Tampere</div>
     <div class="legend-container">
       <img src="SetupLegend.png" alt="legend" />
     </div>
-    <div id="plot4-div" class="plot"></div>
+    <div id="plot3-div" class="plot"></div>
     <div class="images-container">
-      <img src="GLivelabTampereEnergy.png" alt="Image 4a" />
-      <img src="GLivelabTampereDRR.png" alt="Image 4b" />
+      <img src="GLivelabTampereSpec.png" alt="Image 3a" />
+      <img src="GLivelabTampereEnergy.png" alt="Image 3b" />
+      <img src="GLivelabTampereDRR.png" alt="Image 3c" />
+    </div>
+  </div>
+
+  <div class="plot-container" id="plot4">
+    <div class="plot-title">GLivelab-Helsinki</div>
+    <div class="legend-container">
+      <img src="SetupLegend.png" alt="legend" />
+    </div>
+    <div class="plot-title">Data not present yet</div>
+    <div class="images-container">
+      <img src="GLivelabHelsinkiSpec.png" alt="Image 4a" />
+      <img src="GLivelabHelsinkiEnergy.png" alt="Image 4b" />
+      <img src="GLivelabHelsinkiDRR.png" alt="Image 4c" />
     </div>
   </div>
 
@@ -112,7 +132,7 @@
     }
     loadPlotlyJson('plot1-div', 'OtalaSetup.json');
     loadPlotlyJson('plot2-div', 'ImmersiveLabSetup.json');
-    loadPlotlyJson('plot4-div', 'GLivelabTampereSetup.json');
+    loadPlotlyJson('plot3-div', 'GLivelabTampereSetup.json');
   </script>
 </body>
 </html>

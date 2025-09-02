@@ -369,12 +369,30 @@ def plot_DRR_pro_version(rirs: torch.Tensor, fs: int, decay_interval: str='T30',
 
     return None
 
-def plot_room_setup(room) -> None:
+def plot_room_setup(positions) -> None:
 
-    stage = torch.tensor([room.low_level_info['StageAndAudience']['StageEmitters']['Position_m'][0]])
-    loudspeakers = torch.tensor(room.low_level_info['AudioSetup']['SystemEmitters']['Position_m'])
-    microphones = torch.tensor(room.low_level_info['AudioSetup']['SystemReceivers']['Position_m'])
-    audience = torch.tensor([room.low_level_info['StageAndAudience']['AudienceReceivers-Mono']['Position_m'][0]])
+    # stage = torch.tensor([room.low_level_info['StageAndAudience']['StageEmitters']['Position_m'][0]])
+    # loudspeakers = torch.tensor(room.low_level_info['AudioSetup']['SystemEmitters']['Position_m'])
+    # microphones = torch.tensor(room.low_level_info['AudioSetup']['SystemReceivers']['Position_m'])
+    # audience = torch.tensor([room.low_level_info['StageAndAudience']['AudienceReceivers-Mono']['Position_m'][0]])
+
+    stg = positions['stg']
+    mcs = positions['mcs']
+    lds = positions['lds']
+    aud = positions['aud']
+
+    if stg == None: stg = torch.tensor([])
+    else: stg = torch.tensor(positions['stg'])
+    if mcs == None: mcs = torch.tensor([])
+    else: mcs = torch.tensor(positions['mcs'])
+    if lds == None: lds = torch.tensor([])
+    else: lds = torch.tensor(positions['lds'])
+    if aud == None: aud = torch.tensor([])
+    else: aud = torch.tensor(positions['aud'])
+
+    if torch.sum(torch.tensor([len(stg), len(mcs), len(lds), len(aud)])) == 0:
+        print("Audio setup data is not present for this room.")
+        return None
 
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
     colorPalette = [
@@ -393,10 +411,10 @@ def plot_room_setup(room) -> None:
     ax_3d.yaxis.set_pane_color('white')
     ax_3d.zaxis.set_pane_color('white')
 
-    ax_3d.scatter(*zip(*stage), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
-    ax_3d.scatter(*zip(*loudspeakers), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
-    ax_3d.scatter(*zip(*microphones), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
-    ax_3d.scatter(*zip(*audience), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
+    ax_3d.scatter(*zip(*stg), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
+    ax_3d.scatter(*zip(*lds), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
+    ax_3d.scatter(*zip(*mcs), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
+    ax_3d.scatter(*zip(*aud), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
 
     # Labels
     ax_3d.set_xlabel('x in meters', labelpad=15)

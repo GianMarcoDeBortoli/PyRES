@@ -422,6 +422,9 @@ def get_positions_of(
             return None
         return pos
     else:
+        if len(pos) == 0:
+            Warning(f"For the requested room, the number of {str2} is zero.")
+            return None
         check_requested_indices(type=str2, number=len(pos), idx=idx)
         p = []
         for i in idx:
