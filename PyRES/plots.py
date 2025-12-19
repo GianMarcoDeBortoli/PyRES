@@ -248,7 +248,7 @@ def plot_distributions(distributions: torch.Tensor, n_bins: int, labels: list[st
             edgecolor='black',
             log=log_scale
         )
-    plt.legend(loc='upper right')
+    plt.legend(loc='upper left')
     plt.xlabel('Value in dB')
     plt.ylabel('Density')
     plt.tight_layout()
