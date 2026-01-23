@@ -68,18 +68,10 @@ def plot_room_setup(positions: OrderedDict):
 
     # 3D Plot
     ax_3d = fig.add_subplot(111, projection='3d')
-    ax_3d.xaxis.set_pane_color('white')
-    ax_3d.yaxis.set_pane_color('white')
-    ax_3d.zaxis.set_pane_color('white')
-
-    if len(stg) != 0: ax_3d.scatter(*zip(*stg), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
-    else: stg = torch.tensor([[0, 0, 0]])
-    if len(lds) != 0: ax_3d.scatter(*zip(*lds), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
-    else: lds = torch.tensor([[0, 0, 0]])
-    if len(mcs) != 0: ax_3d.scatter(*zip(*mcs), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
-    else: mcs = torch.tensor([[0, 0, 0]])
-    if len(aud) != 0: ax_3d.scatter(*zip(*aud), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
-    else: aud = torch.tensor([[0, 0, 0]])
+    ax_3d.scatter(*zip(*stage), marker='s', color='g', s=100, label='Stage emitters')
+    ax_3d.scatter(*zip(*loudspeakers), marker='s', color='b', s=100, label='System loudspeakers')
+    ax_3d.scatter(*zip(*microphones), marker='o', color='r', s=100, label='System microphones')
+    ax_3d.scatter(*zip(*audience), marker='o', color='y', s=100, label='Audience receivers')
 
     # Labels
     ax_3d.set_xlabel('x in meters', labelpad=15)
@@ -88,13 +80,13 @@ def plot_room_setup(positions: OrderedDict):
     ax_3d.set_zlim(0,)
 
     # Equal scaling
-    room_x = torch.max(torch.cat((stg[:, 0], lds[:, 0], mcs[:, 0], aud[:, 0]))).item() - torch.min(torch.cat((stg[:, 0], lds[:, 0], mcs[:, 0], aud[:, 0]))).item()
-    room_y = torch.max(torch.cat((stg[:, 1], lds[:, 1], mcs[:, 1], aud[:, 1]))).item() - torch.min(torch.cat((stg[:, 1], lds[:, 1], mcs[:, 1], aud[:, 1]))).item()
-    room_z = torch.max(torch.cat((stg[:, 2], lds[:, 2], mcs[:, 2], aud[:, 2]))).item()
+    room_x = torch.max(torch.cat((stage[:, 0], loudspeakers[:, 0], microphones[:, 0], audience[:, 0]))).item() - torch.min(torch.cat((stage[:, 0], loudspeakers[:, 0], microphones[:, 0], audience[:, 0]))).item()
+    room_y = torch.max(torch.cat((stage[:, 1], loudspeakers[:, 1], microphones[:, 1], audience[:, 1]))).item() - torch.min(torch.cat((stage[:, 1], loudspeakers[:, 1], microphones[:, 1], audience[:, 1]))).item()
+    room_z = torch.max(torch.cat((stage[:, 2], loudspeakers[:, 2], microphones[:, 2], audience[:, 2]))).item()
     ax_3d.set_box_aspect([room_x, room_y, room_z])
 
     # Plot orientation
-    ax_3d.view_init(30, 150)
+    ax_3d.view_init(28, 150)
 
     # Legend Plot
     ax_3d.legend(
@@ -112,7 +104,6 @@ def plot_room_setup(positions: OrderedDict):
     fig.subplots_adjust(left=0.00, top=1.3, right=0.5, bottom=-0.1)
     plt.show(block=True)
 
-    return None
 
 def plot_coupling(energy_values: OrderedDict):
 
@@ -524,6 +515,34 @@ def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, n
     cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
 
     plt.show(block=True)
+
+
+def plot_ptmr(evs, fs, nfft):
+    
+    f_axis = torch.linspace(0, fs//2, nfft//2+1)
+    evs_peak = torch.max(torch.abs(evs), dim=1)[0]
+    evs_mean = torch.mean(torch.abs(evs), dim=1)
+    evs_ptmr = evs_peak/evs_mean
+
+    plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    plt.figure(figsize=(7,6))
+    plt.plot(f_axis, mag2db(evs_peak))
+    plt.plot(f_axis, mag2db(evs_mean))
+    plt.plot(f_axis, mag2db(evs_ptmr))
+    plt.xlabel('Frequency in Hz')
+    plt.ylabel('Magnitude in dB')
+    plt.ylim(-50,10)
+    plt.xlim(20,20000)
+    plt.xscale('log')
+    plt.grid()
+    plt.legend(['Peak value', 'Mean value', 'Peak-to-mean ratio'])
+    # plt.ylim(-20,30)
+    # plt.xlim(20,20000)
+    # plt.xscale('log')
+    # plt.grid()
+    plt.tight_layout()
+    plt.show(block=True)
+
 
 
 
