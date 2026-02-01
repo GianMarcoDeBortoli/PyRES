@@ -2,15 +2,11 @@
 # ============================ IMPORTS =============================
 from collections import OrderedDict
 import numpy as np
-import pyfar as pf
-import pyrato as pr
-# PyTorch
+## PyTorch
 import torch
 # FLAMO
+from flamo import dsp, system
 from flamo.functional import db2mag
-# PyRES
-from PyRES.utils import expand_to_dimension, find_direct_path
-
 
 # ==================================================================
 # ========================= PHYSICAL ROOM ==========================
@@ -209,96 +205,86 @@ def positions_on_surface(dim_1, dim_2, lds_n, mcs_n):
 
     return lds_pos, mcs_pos
 
-def reverb_time(rir: torch.Tensor, fs: int, decay_interval: str='T30') -> torch.Tensor:
-    f"""
-    Computes the reverberation time of a room impulse response.
 
-        **Args**:
-            - rir (torch.Tensor): Room impulse response.
-            - fs (int): Sampling frequency [Hz].
-            - decay_interval (str): Decay interval. Defaults to 'T30'.
+# class microphone_noise(dsp.parallelFilter):
+#     r"""
+#     Module used to add microphone background noise to the RES simulation.
+#     """
+#     def __init__(
+#         self,
+#         n_M: int = 1,
+#         rirs: torch.Tensor = None,
+#         fs: int = 48000,
+#         nfft: int = 2**11,
+#         alias_decay_db: float=0.0,
+#     ):
+#         r"""
+#         Initializes the microphone noise module.
 
-        **Returns**:
-            - torch.Tensor: Reverberation time [s].
-    """
+#             **Args**:
+#                 - n_M (int): Number of system microphones.
+#                 - rirs (torch.Tensor): room impulse responses used to extrapolate noise samples
+#                 - fs (int): Sampling frequency [Hz].
+#                 - nfft (int): FFT size.
+#                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
+#         """
+#         dsp.parallelFilter.__init__(
+#             self,
+#             size=(nfft, n_M),
+#             nfft=nfft,
+#             requires_grad=False,
+#             alias_decay_db=alias_decay_db
+#         )
 
-    rir = rir.squeeze().numpy()
-    pf_rir = pf.Signal(data=rir, sampling_rate=fs, domain='time')
-    edc = pr.energy_decay_curve_chu(data=pf_rir, time_shift=False)
-    rt = pr.reverberation_time_energy_decay_curve(energy_decay_curve=edc, T=decay_interval)
+#         self.fs = fs
 
-    return torch.tensor(rt.item())
+#         self.initialize_class(rirs)
 
-def energy_coupling(rir: torch.Tensor, fs: int, decay_interval: str='T30') -> torch.Tensor:
-    f"""
-    Computes the energy coupling of an impulse response.
+#     def forward(self, x, ext_param=None):
+#         r"""
+#         Applies the Filter module to the input tensor x.
+#         Reference: FLAMO.dsp.Filter.forward()
+#         """
+#         self.check_input_shape(x)
+#         if ext_param is None:
+#             return self.freq_convolve(x, self.param)
+#         else:
+#             with torch.no_grad():
+#                 self.assign_value(ext_param)
+#             return self.freq_convolve(x, ext_param)
 
-        **Args**:
-            - rir (torch.Tensor): Room impulse response.
-            - fs (int): Sampling frequency [Hz].
-            - decay_interval (str): Decay interval. Defaults to 'T30'.
-
-        **Returns**:
-            - torch.Tensor: Energy coupling.
-    """
-
-    rir = expand_to_dimension(rir, 3)
-    prev_rt = reverb_time(rir[:,0,0], fs=fs, decay_interval='T20')
     
-    ec = torch.zeros(rir.shape[1:])
-    for i in range(rir.shape[1]):
-        for j in range(rir.shape[2]):
-            r = rir[:,i,j]
-            index1 = find_direct_path(r, fs=fs)
-            rt = reverb_time(r, fs=fs, decay_interval=decay_interval)
-            if (torch.isnan(rt) and decay_interval == 'T30') or rt > 1.5*prev_rt:
-                rt = reverb_time(r, fs=fs, decay_interval='T20')
-            if torch.isnan(rt):
-                print(f"Warning: Could not compute reverberation time for mic {i+1}, speaker {j+1}. Using previous rir value.")
-                rt = prev_rt
-            index2 = (index1 + fs*rt).long()
-            r_cut = r[index1:index2]
-            ec[i,j] = torch.sum(torch.square(r_cut))
-            prev_rt = rt
+#     def init_param(self, rirs):
+#         r"""
+#         Initializes the filter parameters.
+#         Reference: FLAMO.dsp.Filter.init_param()
+#         """
+#         ...
 
-    return ec
+#     def get_freq_response(self):
+#         r"""
+#         Computes the frequency response of the filter.
+#         Reference: FLAMO.dsp.Filter.get_freq_response()
+#         """
+#         self.ir = ...
+#         self.freq_response = lambda param: self.fft(
+#             self.ir
+#             * (
+#                 self.gamma
+#                 ** torch.arange(0, self.ir(param).shape[0], device=self.device)
+#             ).view(-1, *tuple([1 for i in self.map(param).shape[1:]]))
+#         )
 
-def direct_to_reverb_ratio(rir: torch.Tensor, fs: int, decay_interval: str='T30') -> torch.Tensor:
-    f"""
-    Computes the direct-to-reverberant ratio of an impulse response.
-
-        **Args**:
-            - rir (torch.Tensor): Room impulse response.
-            - fs (int): Sampling frequency [Hz].
-            - decay_interval (str): Decay interval. Defaults to 'T30'.
-
-        **Returns**:
-            - torch.Tensor: Direct-to-reverberant ratio.
-    """
-
-    rir = expand_to_dimension(rir, 3)
-    prev_rt = reverb_time(rir[:,0,0], fs=fs, decay_interval='T20')
-
-    drr = torch.zeros(rir.shape[1:])
-    for i in range(rir.shape[1]):
-        for j in range(rir.shape[2]):
-            r = rir[:,i,j]
-            index1 = find_direct_path(r, fs=fs)
-            index2 = (index1 + fs*torch.tensor([0.005])).long()
-            rt = reverb_time(r, fs=fs, decay_interval=decay_interval)
-            if (torch.isnan(rt) and decay_interval == 'T30') or rt > 1.5*prev_rt:
-                rt = reverb_time(r, fs=fs, decay_interval='T20')
-            if torch.isnan(rt):
-                print(f"Warning: Could not compute reverberation time for mic {i+1}, speaker {j+1}. Using default value of 0.5 seconds.")
-                rt = prev_rt
-            index3 = (index1 + fs*rt).long()
-            direct = torch.sum(torch.square(r[index1:index2]))
-            reverb = torch.sum(torch.square(r[index2:index3]))
-            drr[i,j] = direct/reverb
-            prev_rt = rt
-
-    return drr
-
+#     def initialize_class(self, rirs):
+#         r"""
+#         Initializes the class.
+#         Reference: FLAMO.dsp.Filter.initialize_class()
+#         """
+#         self.init_param(rirs)
+#         self.get_gamma()
+#         self.check_param_shape()
+#         self.get_io()
+#         self.get_freq_response()
 
 # ==================================================================
 # ========================== VIRTUAL ROOM ==========================

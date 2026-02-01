@@ -3,8 +3,10 @@
 # PyTorch
 import torch
 from torch.nn.functional import max_pool1d
-#Scipy
+# scipy
 from scipy.signal import find_peaks
+# pyfar
+import pyfar as pf
 
 
 # ==================================================================
@@ -39,25 +41,25 @@ def expand_to_dimension(array: torch.Tensor, dim: int) -> torch.Tensor:
 
 import matplotlib.pyplot as plt
 
-def find_direct_path(rir: torch.Tensor, fs: int) -> int:
+def find_direct_path(impulse_response: torch.Tensor, fs: int) -> int:
     f"""
-    Detects the direct path onset in a room impulse response.
+    Detects the direct path onset in an impulse response.
 
         **Parameters**:
-            - rir (torch.Tensor): Room impulse response (1D tensor).
+            - rir (torch.Tensor): Impulse response (1D tensor).
             - fs (int): Sampling rate (Hz)
 
         **Returns**:
             - direct_index (int): Sample index of estimated direct path
     """
 
-    rir = rir.clone().detach()
-    rir_abs = rir.abs()
+    ir = impulse_response.clone().detach()
+    ir_abs = ir.abs()
 
     # Envelope approximation using max filter (peak envelope)
     kernel_size = 10
     pad = kernel_size // 2
-    env = max_pool1d(rir_abs.view(1, 1, -1), kernel_size=kernel_size, stride=1, padding=pad)[0, 0]
+    env = max_pool1d(ir_abs.view(1, 1, -1), kernel_size=kernel_size, stride=1, padding=pad)[0, 0]
 
     env_threshold = 0.5 * torch.max(env).item()
     peaks_env, properties_env = find_peaks(env.numpy(), height=env_threshold)
@@ -68,11 +70,11 @@ def find_direct_path(rir: torch.Tensor, fs: int) -> int:
     env_peak_loc = peaks_env[0]
     env_peak_width = int(0.8 * properties_env["widths"][0]) if "widths" in properties_env else 20
     start = max(0, env_peak_loc - env_peak_width)
-    end = min(len(rir), env_peak_loc + env_peak_width)
+    end = min(len(ir), env_peak_loc + env_peak_width)
     env_peak_interval = torch.arange(start, end)
 
     # Now find actual peak within the envelope region
-    rir_segment = rir_abs[env_peak_interval]
+    rir_segment = ir_abs[env_peak_interval]
     rir_threshold = 0.5 * torch.max(rir_segment).item()
     peaks_h, _ = find_peaks(rir_segment.numpy(), height=rir_threshold)
 
@@ -82,7 +84,6 @@ def find_direct_path(rir: torch.Tensor, fs: int) -> int:
     delay = int(env_peak_interval[0].item() + peaks_h[0])
 
     return delay
-
 
 def limit_frequency_points(array: torch.Tensor, fs: int, nfft: int, f_interval: tuple[float, float]=None, f_subset: torch.Tensor=None) -> torch.Tensor:
     f"""

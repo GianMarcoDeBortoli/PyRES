@@ -1,0 +1,3 @@
+[submodule "DecayFitNet"]
+	path = external/DecayFitNet
+	url = https://github.com/georg-goetz/DecayFitNet.git

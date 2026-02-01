@@ -173,3 +173,5 @@ cython_debug/
 # PyRES
 /model_states
 /dataRES
+main.py
+/audio_files

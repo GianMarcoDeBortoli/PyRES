@@ -37,6 +37,9 @@ def unpack_kwargs(kwargs):
 
 def plot_room_setup(positions: OrderedDict):
 
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+
     stg = positions['stg']
     mcs = positions['mcs']
     lds = positions['lds']
@@ -110,12 +113,15 @@ def plot_room_setup(positions: OrderedDict):
     # Adjust layout
     fig.tight_layout()
     fig.subplots_adjust(left=0.00, top=1.3, right=0.5, bottom=-0.1)
-    plt.show(block=True)
+    plt.show()
 
     return None
 
 
 def plot_coupling(energy_values: OrderedDict):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     ec_SA = energy_values["SA"]
     ec_SM = energy_values["SM"]
@@ -178,11 +184,14 @@ def plot_coupling(energy_values: OrderedDict):
     axs[1,1].set_xticks(ticks=ticks, labels=ticks+1)
     axs[1,1].set_yticks([])
 
-    plt.show(block=True)
+    plt.show()
 
     return None
 
 def plot_DRR(direct_to_reverb_ratios: OrderedDict):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     drr_SA = direct_to_reverb_ratios["SA"]
     drr_SM = direct_to_reverb_ratios["SM"]
@@ -244,11 +253,131 @@ def plot_DRR(direct_to_reverb_ratios: OrderedDict):
     axs[1,1].set_xticks(ticks=ticks, labels=ticks+1)
     axs[1,1].set_yticks([])
 
+    plt.show()
+
+    return None
+
+
+
+def plot_matrices(matrices: OrderedDict, title: str = None):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+
+    assert len(matrices) == 4, "Four matrices are required: SA, SM, LM, LA."
+
+    SA = matrices["SA"]
+    SM = matrices["SM"]
+    LM = matrices["LM"]
+    LA = matrices["LA"]
+
+    n_stg = SA.shape[2]
+    n_aud = SA.shape[1]
+    n_mcs = LM.shape[1]
+    n_lds = LM.shape[2]
+
+    values = torch.cat((torch.cat((LM, SM), dim=2), torch.cat((LA, SA), dim=2)), dim=1)
+    # values[torch.isnan(values) == True] = torch.mean(values[~torch.isnan(values)])
+
+    plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = plt.get_cmap("viridis")
+
+    for i in range(SA.shape[0]):
+
+        values_plot = [values[i, :n_mcs, :n_lds],
+                       values[i, :n_mcs, n_lds:],
+                       values[i, n_mcs:, :n_lds],
+                       values[i, n_mcs:, n_lds:]]
+
+        fig, axs = plt.subplots(
+            nrows=2,
+            ncols=2,
+            layout="constrained",
+            width_ratios=[n_lds, n_stg],
+            height_ratios=[n_mcs, n_aud],
+            gridspec_kw={'wspace':0.05, 'hspace':0.1},
+            figsize=(9, 4)
+        )
+
+        if title is not None:
+            fig.suptitle(title)
+        fig.suptitle(f'Frequency band {i+1}')
+
+        max_value = torch.max(values)
+        min_value = torch.min(values)
+        norm = colors.Normalize(vmin=min_value, vmax=max_value)
+        
+        images = []
+        for ax, data in zip(axs.flat, values_plot):
+            images.append(ax.imshow(data, norm=norm, cmap=colorPalette))
+
+        fig.colorbar(mappable=images[0], ax=axs, label='Magnitude in dB', aspect=10, pad=0.03)#, ticks=[-40, -35, -30, -25, -20, -15, -10, -5, 0])
+
+        labelpad = 20 if n_mcs<10 else 10
+        axs[0,0].set_ylabel('Mic', labelpad=labelpad)
+        ticks = torch.arange(start=0, end=n_mcs, step=int(torch.ceil(torch.sqrt(torch.tensor(n_mcs)))) if n_mcs>2 else 1).numpy()
+        axs[0,0].set_yticks(ticks=ticks, labels=ticks+1)
+        axs[0,0].set_xticks([])
+        axs[0,1].set_xticks([])
+        axs[0,1].set_yticks([])
+        labelpad = 20 if n_aud<10 else 10
+        axs[1,0].set_ylabel('Aud', labelpad=labelpad)
+        ticks = torch.arange(start=0, end=n_aud, step=int(torch.ceil(torch.sqrt(torch.tensor(n_aud)))) if n_aud>2 else 1).numpy()
+        axs[1,0].set_yticks(ticks=ticks, labels=ticks+1)
+        axs[1,0].set_xlabel('Ldsp', labelpad=5)
+        ticks = torch.arange(start=0, end=n_lds, step=int(torch.ceil(torch.sqrt(torch.tensor(n_lds)))) if n_lds>2 else 1).numpy()
+        axs[1,0].set_xticks(ticks=ticks, labels=ticks+1)
+        axs[1,1].set_xlabel('Stage', labelpad=5)
+        ticks = torch.arange(start=0, end=n_stg, step=int(torch.ceil(torch.sqrt(torch.tensor(n_stg)))) if n_stg>2 else 1).numpy()
+        axs[1,1].set_xticks(ticks=ticks, labels=ticks+1)
+        axs[1,1].set_yticks([])
+
+        plt.show(block=True)
+
+    return None
+
+def plot_matrix(matrix: OrderedDict, title: str = None):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+
+    plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
+    colorPalette = plt.get_cmap("viridis")
+    bands = [125, 250, 500, 1000, 2000, 4000, 8000]
+
+    for band in range(matrix.shape[0]):
+
+        values_plot = torch.squeeze(matrix[band,:,:])
+
+        fig = plt.figure()
+
+        if title is not None:
+            plt.title(f'{title}\nFrequency band {bands[band]} Hz')
+        else:
+            plt.title(f'Frequency band {bands[band]} Hz')
+
+        max_value = torch.max(values_plot)
+        min_value = torch.min(values_plot)
+        norm = colors.Normalize(vmin=min_value, vmax=max_value)
+        
+        im = plt.imshow(values_plot, norm=norm, cmap=colorPalette)
+
+        fig.colorbar(mappable=im, label='Magnitude in dB', aspect=10, pad=0.03)#, ticks=[-40, -35, -30, -25, -20, -15, -10, -5, 0])
+
+        plt.ylabel('Audience')
+        plt.xlabel('Setting')
+        plt.tight_layout()
+        
+
     plt.show(block=True)
 
     return None
 
+
 def plot_distributions(distributions: torch.Tensor, n_bins: int, labels: list[str] = None, log_scale: bool = False):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
     
     if labels is None:
         labels = [f'Distribution {i+1}' for i in range(distributions.shape[1])]
@@ -274,7 +403,7 @@ def plot_distributions(distributions: torch.Tensor, n_bins: int, labels: list[st
     plt.ylabel('Density')
     plt.tight_layout()
 
-    plt.show(block=True)
+    plt.show()
 
     return None
 
@@ -288,6 +417,9 @@ def plot_evs_distribution(evs, fs: int, nfft: int, lower_f_lim: float, higher_f_
     Args:
         evs (_type_): _description_
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     idx1 = int(nfft/fs * lower_f_lim)
     idx2 = int(nfft/fs * higher_f_lim)
@@ -309,11 +441,14 @@ def plot_evs_distribution(evs, fs: int, nfft: int, lower_f_lim: float, higher_f_
     plt.title(label)
     plt.tight_layout()
 
-    plt.show(block=True)
+    plt.show()
 
     return None
 
 def plot_virtualroom_ir(ir, fs, nfft, **kwargs):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     ir = ir/torch.max(ir)
 
@@ -375,10 +510,13 @@ def plot_virtualroom_ir(ir, fs, nfft, **kwargs):
     cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
 
     plt.tight_layout()
-    plt.show(block=True)
+    plt.show()
 
 
 def plot_ptmr(evs, fs, nfft):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
     
     f_axis = torch.linspace(0, fs//2, nfft//2+1)
     evs_peak = torch.max(torch.abs(evs), dim=1)[0]
@@ -402,7 +540,7 @@ def plot_ptmr(evs, fs, nfft):
     # plt.xscale('log')
     # plt.grid()
     plt.tight_layout()
-    plt.show(block=True)
+    plt.show()
 
 # ==================================================================
 # ==================== OPTIMIZATION COMPARISON =====================
@@ -414,6 +552,9 @@ def plot_evs_compare(evs_init, evs_opt, fs: int, nfft: int, lower_f_lim: float, 
     Args:
         evs (_type_): _description_
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     idx1 = int(nfft/fs * lower_f_lim)
     idx2 = int(nfft/fs * higher_f_lim)
@@ -436,7 +577,7 @@ def plot_evs_compare(evs_init, evs_opt, fs: int, nfft: int, lower_f_lim: float, 
     plt.ylabel('Magnitude in dB')
     plt.tight_layout()
 
-    plt.show(block=True)
+    plt.show()
 
     return None
 
@@ -453,6 +594,10 @@ def plot_irs_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, label1='In
             - label2 (str, optional): Label for the second impulse response. Defaults to 'Optimized'.
             - title (str, optional): Title of the plot. Defaults to 'System Impulse Responses'.
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(8, 4), constrained_layout=True)
 
@@ -473,7 +618,7 @@ def plot_irs_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, label1='In
     fig.supxlabel('Time in seconds')
     fig.supylabel('Amplitude')
 
-    plt.show(block=True)
+    plt.show()
 
 def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, nfft: int=2**10, noverlap: int=2**8, label1='Initialized', label2='Optimized') -> None:
     r"""
@@ -488,6 +633,10 @@ def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, n
             - label2 (str, optional): Label for the second signal. Defaults to 'Optimized'.
             - title (str, optional): Title of the plot. Defaults to 'System Impulse Response Spectrograms'.
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+
     Spec_init,f,t = mlab.specgram(ir_1.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
     Spec_opt,_,_ = mlab.specgram(ir_2.detach().squeeze().numpy(), NFFT=nfft, Fs=fs, noverlap=noverlap)
 
@@ -524,10 +673,13 @@ def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, n
     cbar.ax.set_ylim(-100, 0)
     cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
 
-    plt.show(block=True)
+    plt.show()
 
 
 def plot_ptmr(evs, fs, nfft):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
     
     f_axis = torch.linspace(0, fs//2, nfft//2+1)
     evs_peak = torch.max(torch.abs(evs), dim=1)[0]
@@ -551,7 +703,7 @@ def plot_ptmr(evs, fs, nfft):
     # plt.xscale('log')
     # plt.grid()
     plt.tight_layout()
-    plt.show(block=True)
+    plt.show()
 
 
 
@@ -559,6 +711,9 @@ def plot_ptmr(evs, fs, nfft):
 # ==================================================================
 
 def plot_DAFx(unitary, firs, modal_reverb, fdn, poletti, fs, nfft):
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     n_samples = torch.max(torch.tensor([unitary.shape[0], firs.shape[0], modal_reverb.shape[0], fdn.shape[0], poletti.shape[0]]))
     t_axis = torch.linspace(0, n_samples/fs, n_samples)
@@ -658,7 +813,7 @@ def plot_DAFx(unitary, firs, modal_reverb, fdn, poletti, fs, nfft):
     fig.supxlabel('Time in seconds')
     fig.supylabel('Amplitude')
 
-    plt.show(block=True)
+    plt.show()
 
     return None
 
@@ -673,6 +828,9 @@ def plot_combined_figure(fs, nfft, evs_init, evs_opt, evs_f_range, ir_init, ir_o
         tensor_1d_1, tensor_1d_2: torch.Tensor (1D) -> Data for the two spectrograms.
         cmap: str -> Colormap for the spectrograms.
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     # Compute the frequency axis
     lower_f_lim = int(nfft/fs * evs_f_range[0])
@@ -753,12 +911,14 @@ def plot_combined_figure(fs, nfft, evs_init, evs_opt, evs_f_range, ir_init, ir_o
     fig.subplots_adjust(left=0.10, right=0.90, top=0.92, bottom=0.15)
 
     # Show the plot
-    plt.show(block=True)
+    plt.show()
 
     return None
 
 def plot_eq_curve(curve, fs, nfft):
 
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
 
     f_axis = torch.linspace(0, fs//2, curve.shape[0])
     curve_db = mag2db(curve)
@@ -777,7 +937,7 @@ def plot_eq_curve(curve, fs, nfft):
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.3)
 
-    plt.show(block=True)
+    plt.show()
 
 def plot_boxplot_spectrogram(subplot_spec, fig, nfft, fs, noverlap, evs, evs_label, rir, rir_time_label, rir_freq_label, rir_cbar_label, cmap, vmin, vmax, spec_y_scale='log'):
     """
@@ -791,6 +951,10 @@ def plot_boxplot_spectrogram(subplot_spec, fig, nfft, fs, noverlap, evs, evs_lab
         cmap: str -> Colormap for spectrogram
         vmin, vmax: float -> Color scale limits for spectrogram
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+
     # Create a gridspec within the given subplot_spec
     gs = gridspec.GridSpecFromSubplotSpec(3, 5, subplot_spec=subplot_spec, height_ratios=[0.3, 2, 0.1], hspace=0.2, width_ratios=[4, 0.2, 0.2, 0.2, 0.3])
     
@@ -849,6 +1013,10 @@ def plot_grid_boxplot_spectrogram(nfft, fs, noverlap, tensor_pairs, rows, cols, 
         figsize: tuple -> Figure size
         cmap: str -> Colormap for spectrograms
     """
+
+    # Always reset to default before updating
+    plt.rcParams.update(plt.rcParamsDefault)
+    
     plt.rcParams.update({'font.family':'serif', 'font.size':11, 'font.weight':'heavy', 'text.usetex':True})
 
     fig = plt.figure(figsize=figsize)
@@ -903,4 +1071,4 @@ def plot_grid_boxplot_spectrogram(nfft, fs, noverlap, tensor_pairs, rows, cols, 
     # Adjust the layout to make space for labels
     fig.subplots_adjust(left=0.12, top=0.92, right=0.93, bottom=0.03)
     
-    plt.show(block=True)
+    plt.show()
