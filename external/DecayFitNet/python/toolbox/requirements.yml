@@ -1,0 +1,13 @@
+name: audio
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - pytorch
+  - torchvision
+  - torchaudio
+  - h5py
+  - tensorboard
+  - numpy
+  - matplotlib
+  - scipy
