@@ -155,10 +155,10 @@ class _PhRoom(object):
                 - OrderedDict: System RIRs.
         """
         RIRs = OrderedDict()
-        RIRs.update({'SM': self.get_stg_to_mcs().param.clone().detach()})
-        RIRs.update({'SA': self.get_stg_to_aud().param.clone().detach()})
         RIRs.update({'LM': self.get_lds_to_mcs().param.clone().detach()})
+        RIRs.update({'SM': self.get_stg_to_mcs().param.clone().detach()})
         RIRs.update({'LA': self.get_lds_to_aud().param.clone().detach()})
+        RIRs.update({'SA': self.get_stg_to_aud().param.clone().detach()})
         return RIRs
     
     def create_modules(self,
@@ -240,16 +240,16 @@ class _PhRoom(object):
                 - OrderedDict: Reverberation time of the system RIRs.
         """
         rirs = self.get_rirs()
-        rt_SA = reverberation_time(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
-        rt_SM = reverberation_time(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         rt_LM = reverberation_time(rirs["LM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        rt_SM = reverberation_time(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         rt_LA = reverberation_time(rirs["LA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        rt_SA = reverberation_time(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
 
         rt = OrderedDict()
-        rt.update({'SA': rt_SA})
-        rt.update({'SM': rt_SM})
         rt.update({'LM': rt_LM})
+        rt.update({'SM': rt_SM})
         rt.update({'LA': rt_LA})
+        rt.update({'SA': rt_SA})
 
         return rt
 
@@ -265,16 +265,16 @@ class _PhRoom(object):
                 - OrderedDict: Clarity index of the system RIRs.
         """
         rirs = self.get_rirs()
-        ci_SA = clarity_index(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
-        ci_SM = clarity_index(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         ci_LM = clarity_index(rirs["LM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        ci_SM = clarity_index(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         ci_LA = clarity_index(rirs["LA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        ci_SA = clarity_index(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
 
         ci = OrderedDict()
-        ci.update({'SA': ci_SA})
-        ci.update({'SM': ci_SM})
         ci.update({'LM': ci_LM})
+        ci.update({'SM': ci_SM})
         ci.update({'LA': ci_LA})
+        ci.update({'SA': ci_SA})
 
         return ci
 
@@ -290,16 +290,16 @@ class _PhRoom(object):
                 - OrderedDict: Energy coupling of the system RIRs.
         """
         rirs = self.get_rirs()
-        ec_SA = energy_coupling(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
-        ec_SM = energy_coupling(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         ec_LM = energy_coupling(rirs["LM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        ec_SM = energy_coupling(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         ec_LA = energy_coupling(rirs["LA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        ec_SA = energy_coupling(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
 
         ec = OrderedDict()
-        ec.update({'SA': ec_SA})
-        ec.update({'SM': ec_SM})
         ec.update({'LM': ec_LM})
+        ec.update({'SM': ec_SM})
         ec.update({'LA': ec_LA})
+        ec.update({'SA': ec_SA})
 
         return ec
 
@@ -315,16 +315,16 @@ class _PhRoom(object):
                 - OrderedDict: Direct-to-reverberant ratio of the system RIRs.
         """
         rirs = self.get_rirs()
-        drr_SA = direct_to_reverb_ratio(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
-        drr_SM = direct_to_reverb_ratio(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         drr_LM = direct_to_reverb_ratio(rirs["LM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        drr_SM = direct_to_reverb_ratio(rirs["SM"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
         drr_LA = direct_to_reverb_ratio(rirs["LA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
+        drr_SA = direct_to_reverb_ratio(rirs["SA"], fs=self.fs, octave_bands=octave_bands, frequency_range=frequency_range)
 
         drr = OrderedDict()
-        drr.update({'SA': drr_SA})
-        drr.update({'SM': drr_SM})
         drr.update({'LM': drr_LM})
+        drr.update({'SM': drr_SM})
         drr.update({'LA': drr_LA})
+        drr.update({'SA': drr_SA})
 
         return drr
 
@@ -537,7 +537,10 @@ class PhRoom_dataset(_PhRoom):
         if room_acoustics_analysis:
             self.compute_room_acoustics_parameters(octave_bands=analysis_octave_bands, frequency_range=analysis_frequency_range)
 
-    def __load_rirs(self, ds_dir: str) -> tuple[dsp.Filter, dsp.Filter, dsp.Filter, dsp.Filter, int]:
+    def __load_rirs(
+            self,
+            ds_dir: str,
+        ) -> tuple[dsp.Filter, dsp.Filter, dsp.Filter, dsp.Filter, int]:
         r"""
         Loads all the room impulse responses from the dataset and returns them in processing modules.
 
@@ -568,7 +571,6 @@ class PhRoom_dataset(_PhRoom):
             sys_to_sys=rirs["sys_to_sys"]
         )
 
-        # Create processing modules
         h_SA, h_SM, h_LA, h_LM = self.create_modules(
             rirs_SA=rirs_norm["stg_to_aud"],
             rirs_SM=rirs_norm["stg_to_sys"],
@@ -598,7 +600,10 @@ class PhRoom_wgn(_PhRoom):
             room_RT: float,
             n_M: int,
             n_L: int,
-            method: str = 'Poletti'
+            method: str = 'Poletti',
+            room_acoustics_analysis: bool = False,
+            analysis_octave_bands: int | str = 'broadband',
+            analysis_frequency_range: tuple = (63.0, 16000.0)
         ) -> None:
         r"""
         Initializes the PhRoom_wgn object.
@@ -611,6 +616,10 @@ class PhRoom_wgn(_PhRoom):
                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
                 - n_L (int): Number of system loudspeakers.
                 - n_M (int): Number of system microphones.
+                - method (str): Method for the distribution of the system microphones and loudspeakers. Choose 'Poletti' or 'Barron'.
+                - room_acoustics_analysis (bool): If True, computes and stores room acoustics parameters.
+                - analysis_octave_bands (int | str): Number of octave bands or 'broadband' for room acoustics analysis.
+                - analysis_frequency_range (tuple): Frequency range for the octave bands in room acoustics analysis.
         """
         assert n_M > 0,  "The number of system microphones must be higher than 0."
         assert n_L > 0,  "The number of system loudspeakers must be higher than 0."
@@ -642,8 +651,8 @@ class PhRoom_wgn(_PhRoom):
 
         self.h_SA, self.h_SM, self.h_LA, self.h_LM, self.rir_length = self.__generate_rirs()
 
-        self.energy_coupling = self.compute_energy_coupling()
-        self.direct_to_reverb_ratio = self.compute_direct_to_reverb_ratio()
+        if room_acoustics_analysis:
+            self.compute_room_acoustics_parameters(octave_bands=analysis_octave_bands, frequency_range=analysis_frequency_range)
 
     def __generate_rirs(self) -> tuple[dsp.Filter, dsp.Filter, dsp.Filter, dsp.Filter, int]:
         r"""
