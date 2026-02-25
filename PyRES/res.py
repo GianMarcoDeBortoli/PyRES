@@ -10,8 +10,8 @@ import torch.nn as nn
 from flamo import dsp, system
 from flamo.functional import db2mag, mag2db, get_magnitude, get_eigenvalues
 # PyRES
-from PyRES.physical_room import PhRoom
-from PyRES.virtual_room import VrRoom
+from PyRES.physical_room import _PhRoom
+from PyRES.virtual_room import _VrRoom
 from PyRES.utils import expand_to_dimension
 
 
@@ -38,8 +38,8 @@ class RES(object):
     """
     def __init__(
             self,
-            physical_room: PhRoom,
-            virtual_room: VrRoom,
+            physical_room: _PhRoom,
+            virtual_room: _VrRoom,
         ):
         r"""
         Initializes the Reverberation Enhancement System (RES).
@@ -84,7 +84,7 @@ class RES(object):
     # ==================================================================================
     # ================================ CHECK METHODS ===================================
 
-    def __check_param_compatibility(self, physical_room: PhRoom, virtual_room: VrRoom) -> torch.Tensor:
+    def __check_param_compatibility(self, physical_room: _PhRoom, virtual_room: _VrRoom) -> torch.Tensor:
 
         assert(physical_room.fs == virtual_room.fs), "Sampling frequency must be the same in physical and virtual rooms."
         assert(physical_room.nfft == virtual_room.nfft), "Number of frequency bins must be the same in physical and virtual rooms."
@@ -92,7 +92,7 @@ class RES(object):
 
         return physical_room.fs, physical_room.nfft, physical_room.alias_decay_db
 
-    def __check_io_compatibility(self, physical_room: PhRoom, virtual_room: VrRoom) -> tuple[int, int, int, int]:
+    def __check_io_compatibility(self, physical_room: _PhRoom, virtual_room: _VrRoom) -> tuple[int, int, int, int]:
         
         assert(physical_room.transducer_number['mcs'] == virtual_room.n_M), "Number of microphones must be the same in physical and virtual rooms."
         assert(physical_room.transducer_number['lds'] == virtual_room.n_L), "Number of loudspeakers must be the same in physical and virtual rooms."
