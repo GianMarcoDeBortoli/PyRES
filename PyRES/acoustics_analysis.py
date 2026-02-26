@@ -1,14 +1,13 @@
 # ==================================================================
 # ============================ IMPORTS =============================
 import numpy as np
-from external.DecayFitNet.python.toolbox.DecayFitNetToolbox import DecayFitNetToolbox
-from external.DecayFitNet.python.toolbox.core import PreprocessRIR
+from decayfitnet.toolbox import DecayFitNetToolbox
+from decayfitnet.toolbox.core import PreprocessRIR
 import pyfar as pf
 import pyrato as pr
 import torch
 # PyRES
 from PyRES.utils import expand_to_dimension, find_direct_path
-
 
 # ==================================================================
 # ===================== OCTAVE BANDS ANALYSIS ======================

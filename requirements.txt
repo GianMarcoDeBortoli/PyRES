@@ -12,3 +12,5 @@ pysoundfile
 h5py
 onnx
 onnxruntime
+
+-e external/DecayFitNet
