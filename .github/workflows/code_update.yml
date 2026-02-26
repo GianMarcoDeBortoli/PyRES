@@ -34,14 +34,17 @@ jobs:
         run: |
           brew install libsndfile
           python -m venv pyres-env
-          pyres-env/bin/pip --upgrade pip
-          pyres-env/bin/pip install -r requirements.txt
+          source pyres-env/bin/activate
+          echo "export DYLD_LIBRARY_PATH=$(brew --prefix libsndfile)/lib:$DYLD_LIBRARY_PATH" >> pyres-env/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       # Run test code
       - name: Run test example (MacOS/Linux - pip)
         shell: bash -l {0}
         run: |
-          pyres-env/bin/python tests/T1_virtual-room.py
-          pyres-env/bin/python tests/T2_physical-room.py
-          pyres-env/bin/python tests/T3_res.py
-          pyres-env/bin/python tests/T4_training.py
+          source pyres-env/bin/activate
+          python tests/T1_virtual-room.py
+          python tests/T2_physical-room.py
+          python tests/T3_res.py
+          python tests/T4_training.py
