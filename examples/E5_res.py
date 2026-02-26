@@ -9,7 +9,7 @@ from flamo.functional import mag2db
 from PyRES.virtual_room import FDN
 from PyRES.physical_room import PhRoom_wgn
 from PyRES.res import RES
-from PyRES.plots import plot_spectrograms_compare, plot_evs_distribution
+from PyRES.plots import plot_spectrograms_compare
 
 
 ###########################################################################################
@@ -125,13 +125,5 @@ if __name__ == '__main__':
     print(f"The flatter the magnitude distribution of the open-loop eigenvalues is, the more the energy is evenly distributed across frequencies and eigenchannels.")
 
     evs = res.open_loop_eigenvalues()
-
-    plot_evs_distribution(
-        evs=evs,
-        fs=samplerate,
-        nfft=nfft,
-        lower_f_lim=20,
-        higher_f_lim=20000
-    )
 
     exit(0)

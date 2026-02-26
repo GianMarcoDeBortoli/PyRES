@@ -5,8 +5,6 @@ import torch
 from torch.nn.functional import max_pool1d
 # scipy
 from scipy.signal import find_peaks
-# pyfar
-import pyfar as pf
 
 
 # ==================================================================

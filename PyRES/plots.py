@@ -2,14 +2,13 @@
 # ============================ IMPORTS =============================
 from collections import OrderedDict
 import matplotlib.pyplot as plt
-from matplotlib import mlab, colors, gridspec
+from matplotlib import mlab, colors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.ticker import FormatStrFormatter
 import seaborn as sns
 import numpy as np
 # PyTorch
 import torch
-import torchaudio
 # FLAMO
 from flamo.functional import mag2db, get_magnitude
 

@@ -27,8 +27,6 @@ from PyRES.acoustics_analysis import (
 from PyRES.functional import simulate_setup
 from PyRES.plots import (
     plot_room_setup,
-    plot_coupling,
-    plot_DRR,
     plot_distributions
 )
 
@@ -400,24 +398,6 @@ class _PhRoom(object):
         else:
             raise AttributeError("Room acoustics analysis has not been performed yet. Room acoustics parameters are not available.")
     
-    def plot_coupling(self) -> None:
-        r"""
-        Plots the room coupling.
-        """
-        if hasattr(self, 'room_acoustics_parameters'):
-            plot_coupling(energy_values=self.room_acoustics_parameters['energy_coupling'])
-        else:
-            raise AttributeError("Room acoustics analysis has not been performed yet. Room acoustics parameters are not available.")
-    
-    def plot_DRR(self) -> None:
-        r"""
-        Plots the direct-to-reverberant ratio (DRR).
-        """
-        if hasattr(self, 'room_acoustics_parameters'):
-            plot_DRR(drr_values=self.room_acoustics_parameters['direct_to_reverb_ratio'])
-        else:
-            raise AttributeError("Room acoustics analysis has not been performed yet. Room acoustics parameters are not available.")
-
     def plot_h_LM_distributions(self, db_scale: bool=False) -> None:
         r"""
         Plots the distributions of the room impulse responses between system emitters and system receivers.
