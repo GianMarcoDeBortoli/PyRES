@@ -1,5 +1,5 @@
 # PyRES
-### A Python library for Reverberation Enhancement System development and simulation.
+### Python library for Reverberation Enhancement System development and simulation.
 
 ---
 

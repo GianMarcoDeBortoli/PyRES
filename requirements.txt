@@ -9,3 +9,8 @@ matplotlib
 pyqt5
 pyqt6
 pysoundfile
+h5py
+onnx
+onnxruntime
+
+-e external/DecayFitNet
