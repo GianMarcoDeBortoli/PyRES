@@ -413,3 +413,14 @@ def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, n
     cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
 
     plt.show(block=True)
+
+__all__ = [
+    'plot_room_setup',
+    'plot_coupling',
+    'plot_DRR',
+    'plot_distributions',
+    'plot_evs_distribution',
+    'plot_evs_compare',
+    'plot_irs_compare',
+    'plot_spectrograms_compare',
+]

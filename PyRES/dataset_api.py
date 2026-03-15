@@ -4,8 +4,7 @@ from collections import OrderedDict
 import json
 # PyTorch
 import torch, torchaudio
-# PyRES
-from PyRES.functional import energy_coupling
+from functional import energy_coupling
 
 
 # ==================================================================
@@ -471,3 +470,19 @@ def check_requested_indices(
     assert len(idx) == len(set(idx)), f"Requested indices of {type} must be unique."
     assert max(idx) <= number, f"For the requested room, the maximum index of {type} is {number-1}. You cannot request the index {max(idx)}." 
     return None
+
+
+__all__ = [
+    'get_hl_info',
+    'get_ll_info',
+    'get_transducer_number',
+    'get_number_of',
+    'get_transducer_positions',
+    'get_positions_of',
+    'get_rir_metadata',
+    'get_rir_foldername_of',
+    'get_rirs',
+    'get_rirs_of',
+    'normalize_rirs',
+    'check_requested_indices',
+]

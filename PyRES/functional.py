@@ -8,8 +8,8 @@ import pyrato as pr
 import torch
 # FLAMO
 from flamo.functional import db2mag
-# PyRES
-from PyRES.utils import expand_to_dimension, find_direct_path
+
+from utils import expand_to_dimension, find_direct_path
 
 
 # ==================================================================
@@ -474,3 +474,19 @@ def system_equalization_curve(
             target = scaling_factor * torch.ones(mean_evs.shape[0],)
         
         return target
+
+__all__ = [
+    # Physical room functions
+    'simulate_setup',
+    'positions_on_surface',
+    'reverb_time',
+    'energy_coupling',
+    'direct_to_reverb_ratio',
+    # Virtual room functions
+    'one_pole_filter',
+    'resonance_filter',
+    'modal_reverb',
+    # Optimization functions
+    'system_equalization_curve',
+]
+

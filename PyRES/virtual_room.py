@@ -7,7 +7,7 @@ from flamo import dsp, system
 from flamo.functional import db2mag, skew_matrix
 from flamo.auxiliary.reverb import rt2slope
 # PyRES
-from PyRES.functional import modal_reverb, one_pole_filter
+from functional import modal_reverb, one_pole_filter
 
 
 # ==================================================================
@@ -836,3 +836,15 @@ class phase_cancelling_modal_reverb(dsp.DSP):
         self.get_io()
         self.get_freq_response()
         self.get_freq_convolve()
+
+__all__ = [
+    'VrRoom',
+    'unitary_parallel_connections',
+    'unitary_mixing_matrix',
+    'random_FIRs',
+    'phase_cancellation',
+    'FDN',
+    'unitary_reverberator',
+    'FDN_one_pole_absorption',
+    'phase_cancelling_modal_reverb',
+]

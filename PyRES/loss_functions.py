@@ -150,3 +150,9 @@ class colorless_reverb(mse_loss):
         target = torch.ones_like(prediction)
 
         return self.mse_loss(prediction, target)
+
+__all__ = [
+    'MSE_evs_mod',
+    'MSE_evs_idxs',
+    'colorless_reverb',
+]
