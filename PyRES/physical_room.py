@@ -3,6 +3,7 @@
 from collections import OrderedDict
 import numpy as np
 import pyfar as pf
+import pyrato as pr
 # PyTorch
 import torch
 import torch.nn as nn
@@ -22,7 +23,8 @@ from PyRES.acoustics_analysis import (
     reverberation_time,
     clarity_index,
     energy_coupling,
-    direct_to_reverb_ratio
+    direct_to_reverb_ratio,
+    mixing_time
 )
 from PyRES.functional import simulate_setup
 from PyRES.utils import find_direct_path
@@ -30,7 +32,7 @@ from PyRES.plots import (
     plot_room_setup,
     plot_distributions
 )
-
+import matplotlib.pyplot as plt
 
 # ==================================================================
 # =========================== BASE CLASS ===========================
@@ -374,11 +376,13 @@ class _PhRoom(object):
         else:
             raise AttributeError("Room acoustics analysis has not been performed yet. Room acoustics parameters are not available.")
     
-    def plot_setup(self) -> None:
+    def plot_setup(self, which: list[str]="all", plot_legend: bool=False) -> None:
         r"""
         Plots the room setup.
         """
-        plot_room_setup(self.transducer_positions)
+        if which == "all":
+            which = ['stg', 'lds', 'mcs', 'aud']
+        plot_room_setup(self.transducer_positions, which, plot_legend)
         return None
     
     def plot_reverberation_time(self) -> None:
@@ -417,28 +421,56 @@ class _PhRoom(object):
         distributions = torch.stack((real.flatten(), imag.flatten()), dim=1)
         plot_distributions(distributions=distributions, n_bins=self.nfft//100, labels=['Real', 'Imaginary'])
         return None
+    
+    def _rir_cut(self, rirs: torch.Tensor, part: str) -> torch.Tensor: # = 'direct' | 'early' | 'late'
 
-    def only_direct_path(self, window_duration_ms: float = 1.0) -> None:
+        for i in range(rirs.shape[1]):  # receivers
+            for j in range(rirs.shape[2]):  # emitters
+                rir = rirs[:, i, j].detach().clone()
+                direct_path = find_direct_path(rir, fs=self.fs)
+                match part:
+                    case 'direct':
+                        t_03 = 0.003
+                        t_05 = 0.005
+                        index_start = np.max([0, direct_path - self.fs*t_03]).astype(int).item()
+                        index_end = direct_path + (np.array([self.fs*t_05])).astype(int).item()
+                        rirs[:index_start, i, j] = 0.0
+                        rirs[index_end:, i, j] = 0.0
+                    case 'direct+early':
+                        t_03 = 0.003
+                        mt = mixing_time(ir=rir[direct_path:].numpy(), n=1024, fs=self.fs, mixing_thresh=0.95, hop=512)
+                        index_start = np.max([0, direct_path - self.fs*t_03]).astype(int).item()
+                        index_end = direct_path + int(mt/1000.0*self.fs)
+                        rirs[:index_start, i, j] = 0.0
+                        rirs[index_end:, i, j] = 0.0
+                    case 'early':
+                        t_05 = 0.005
+                        mt = mixing_time(ir=rir[direct_path:].numpy(), fs=self.fs)
+                        index_start = direct_path + int(self.fs*t_05)
+                        index_end = direct_path + int(mt/1000.0*self.fs)
+                        rirs[:index_start, i, j] = 0.0
+                        rirs[index_end:, i, j] = 0.0
+                    case 'early+late':
+                        t_05 = 0.005
+                        index_start = direct_path + (np.array([self.fs*t_05])).astype(int).item()
+                        rir_temp = pf.Signal(data=rir, sampling_rate=self.fs, domain='time')
+                        index_end = direct_path + (pr.intersection_time_lundeby(data=rir_temp, time_shift=True)[0] * self.fs).astype(int).item()
+                        rirs[:index_start, i, j] = 0.0
+                        rirs[index_end:, i, j] = 0.0
+                    case 'late':
+                        mt = mixing_time(ir=rir[direct_path:].numpy(), n=1024, fs=self.fs, mixing_thresh=0.95, hop=512)
+                        index_start = direct_path + int(mt/1000.0*self.fs)
+                        rir_temp = pf.Signal(data=rir, sampling_rate=self.fs, domain='time')
+                        index_end = direct_path + (pr.intersection_time_lundeby(data=rir_temp, time_shift=True)[0] * self.fs).astype(int).item()
+                        rirs[:index_start, i, j] = 0.0
+                        rirs[index_end:, i, j] = 0.0
+        return rirs
+
+    def select_rir_part(self, part: str) -> OrderedDict:
         r"""
-        Applies a hard time window (rectangular) to each impulse response so that the
-        direct path is preserved while early reflections and late reverberation are
-        suppressed. Uses hard cuts to preserve frequency content of kept samples.
-
             **Args**:
-                - window_duration_ms (float): Duration of the window after the direct path
-                  in milliseconds. Defaults to 5.0 ms. The direct-path onset and this
-                  window are preserved unchanged, everything after is hard-zeroed.
-
-            **Modifies**:
-                - h_SA, h_SM, h_LA, h_LM: The impulse responses are modified in-place to
-                  contain only the direct path with a hard cut (no frequency modification).
+                part (str): 'direct' | 'early' | 'late'
         """
-        window_samples = int(window_duration_ms * self.fs / 1000.0)
-        if window_samples <= 0:
-            return None
-
-        # Store originals (once) so that windowing is non-destructive w.r.t. the
-        # raw dataset / generated RIRs.
         if not hasattr(self, "h_SA_original"):
             self.h_SA_original = self.h_SA.param.clone().detach()
         if not hasattr(self, "h_SM_original"):
@@ -447,176 +479,14 @@ class _PhRoom(object):
             self.h_LA_original = self.h_LA.param.clone().detach()
         if not hasattr(self, "h_LM_original"):
             self.h_LM_original = self.h_LM.param.clone().detach()
-
-        def _apply_hard_cut(rirs: torch.Tensor) -> torch.Tensor:
-            """
-            For each [receiver, emitter] pair, keep everything up to direct_path_idx + window_samples,
-            then hard-zero everything after. This preserves frequency content of kept samples.
-            """
-            n_samples = rirs.shape[0]
-            for i in range(rirs.shape[1]):  # receivers
-                for j in range(rirs.shape[2]):  # emitters
-                    rir = rirs[:, i, j]
-                    try:
-                        direct_path_idx = find_direct_path(rir, fs=self.fs)
-                    except RuntimeError:
-                        # If direct path cannot be found, start window from sample 0
-                        direct_path_idx = 0
-
-                    if direct_path_idx >= n_samples:
-                        continue
-
-                    # Hard cut: keep everything up to direct_path_idx + window_samples
-                    cut_end = min(direct_path_idx + window_samples, n_samples)
-                    
-                    # Keep everything before cut_end unchanged, zero everything after
-                    rirs[cut_end:, i, j] = 0.0
-
-            return rirs
 
         # Process all RIR blocks
-        self.h_SA.assign_value(_apply_hard_cut(self.h_SA.param.clone()))
-        self.h_SM.assign_value(_apply_hard_cut(self.h_SM.param.clone()))
-        self.h_LA.assign_value(_apply_hard_cut(self.h_LA.param.clone()))
-        self.h_LM.assign_value(_apply_hard_cut(self.h_LM.param.clone()))
+        self.h_SA.assign_value(self._rir_cut(self.h_SA.param.clone(), part=part))
+        self.h_SM.assign_value(self._rir_cut(self.h_SM.param.clone(), part=part))
+        self.h_LA.assign_value(self._rir_cut(self.h_LA.param.clone(), part=part))
+        self.h_LM.assign_value(self._rir_cut(self.h_LM.param.clone(), part=part))
 
-        return None
-
-    def only_early_reflections(self, window_duration_ms: float = 50.0, suppress_direct_path_ms: int = 1.0) -> None:
-        r"""
-        Keeps only the early-reflection portion of each impulse response, starting
-        from the direct-path onset, using hard cuts to preserve frequency content.
-
-            **Args**:
-                - window_duration_ms (float): Duration of the early-reflection window
-                  starting at the direct path in milliseconds. Defaults to 50 ms.
-                - suppress_direct_path_samples (int): Number of samples to zero at the start
-                  to suppress the direct path. Defaults to 10 samples (~0.2 ms at 48 kHz).
-
-            **Modifies**:
-                - h_SA, h_SM, h_LA, h_LM: The impulse responses are modified in-place to
-                  contain only early reflections with hard cuts (no frequency modification).
-        """
-        window_samples = int(window_duration_ms * self.fs / 1000.0)
-        if window_samples <= 0:
-            return None
-
-        # Store originals (once) so that windowing is non-destructive w.r.t. the
-        # raw dataset / generated RIRs.
-        if not hasattr(self, "h_SA_original"):
-            self.h_SA_original = self.h_SA.param.clone().detach()
-        if not hasattr(self, "h_SM_original"):
-            self.h_SM_original = self.h_SM.param.clone().detach()
-        if not hasattr(self, "h_LA_original"):
-            self.h_LA_original = self.h_LA.param.clone().detach()
-        if not hasattr(self, "h_LM_original"):
-            self.h_LM_original = self.h_LM.param.clone().detach()
-
-        def _keep_early(rirs: torch.Tensor) -> torch.Tensor:
-            """
-            For each [receiver, emitter] pair, keep a window of length `window_samples`
-            starting at the direct path. Zero the direct path samples, keep early reflections
-            unchanged, then hard-zero everything after the window.
-            """
-            n_samples = rirs.shape[0]
-            for i in range(rirs.shape[1]):  # receivers
-                for j in range(rirs.shape[2]):  # emitters
-                    rir = rirs[:, i, j]
-                    try:
-                        direct_path_idx = find_direct_path(rir, fs=self.fs)
-                    except RuntimeError:
-                        # If direct path cannot be found, just keep a window at the start
-                        direct_path_idx = 0
-
-                    start = max(0, direct_path_idx)
-                    end = min(start + window_samples, n_samples)
-                    win_len = end - start
-                    if win_len <= 0:
-                        rirs[:, i, j] = 0.0
-                        continue
-
-                    # Hard cut: zero before start, suppress direct path, keep rest of window, zero after
-                    rirs[:start, i, j] = 0.0
-                    rirs[end:, i, j] = 0.0
-                    
-                    # Suppress direct path samples (zero first few samples of the window)
-                    samples_from_direct_path = int(suppress_direct_path_ms * self.fs / 1000.0)
-                    suppress_end = min(start + samples_from_direct_path, end)
-                    rirs[start:suppress_end, i, j] = 0.0
-                    
-                    # Rest of window is kept unchanged (preserves frequency content)
-
-            return rirs
-
-        self.h_SA.assign_value(_keep_early(self.h_SA.param.clone()))
-        self.h_SM.assign_value(_keep_early(self.h_SM.param.clone()))
-        self.h_LA.assign_value(_keep_early(self.h_LA.param.clone()))
-        self.h_LM.assign_value(_keep_early(self.h_LM.param.clone()))
-
-        return None
-
-    def only_late_reverb(self, transition_duration_ms: float = 50.0) -> None:
-        r"""
-        Keeps only the late reverberation tail of each impulse response, starting
-        after the early-reflection window, with a hard cut to preserve frequency content.
-
-            **Args**:
-                - transition_duration_ms (float): Duration after direct path before
-                  keeping the late reverb, in milliseconds. Defaults to 50 ms.
-                  Everything before this point is hard-zeroed, everything after is kept unchanged.
-
-            **Modifies**:
-                - h_SA, h_SM, h_LA, h_LM: The impulse responses are modified in-place to
-                  contain only the late reverberation with a hard cut (no frequency modification).
-        """
-        transition_samples = int(transition_duration_ms * self.fs / 1000.0)
-        if transition_samples <= 0:
-            return None
-
-        # Store originals (once) so that windowing is non-destructive w.r.t. the
-        # raw dataset / generated RIRs.
-        if not hasattr(self, "h_SA_original"):
-            self.h_SA_original = self.h_SA.param.clone().detach()
-        if not hasattr(self, "h_SM_original"):
-            self.h_SM_original = self.h_SM.param.clone().detach()
-        if not hasattr(self, "h_LA_original"):
-            self.h_LA_original = self.h_LA.param.clone().detach()
-        if not hasattr(self, "h_LM_original"):
-            self.h_LM_original = self.h_LM.param.clone().detach()
-
-        def _keep_late(rirs: torch.Tensor) -> torch.Tensor:
-            """
-            For each [receiver, emitter] pair, hard-zero everything up to an onset
-            (direct path + transition region), then keep the late tail unchanged.
-            """
-            n_samples = rirs.shape[0]
-            for i in range(rirs.shape[1]):  # receivers
-                for j in range(rirs.shape[2]):  # emitters
-                    rir = rirs[:, i, j]
-                    try:
-                        direct_path_idx = find_direct_path(rir, fs=self.fs)
-                    except RuntimeError:
-                        # If direct path cannot be found, treat onset as 0
-                        direct_path_idx = 0
-
-                    onset = min(direct_path_idx + transition_samples, n_samples)
-                    if onset >= n_samples:
-                        # No late tail available
-                        rirs[:, i, j] = 0.0
-                        continue
-
-                    # Hard cut: zero everything before onset, keep everything after unchanged
-                    rirs[:onset, i, j] = 0.0
-                    # Everything from onset onward is already correct (unchanged)
-
-            return rirs
-
-        self.h_SA.assign_value(_keep_late(self.h_SA.param.clone()))
-        self.h_SM.assign_value(_keep_late(self.h_SM.param.clone()))
-        self.h_LA.assign_value(_keep_late(self.h_LA.param.clone()))
-        self.h_LM.assign_value(_keep_late(self.h_LM.param.clone()))
-
-        return None
+        return self.get_rirs()
 
     def suppress_feedback(self, gain: float = 0.0) -> None:
         r"""

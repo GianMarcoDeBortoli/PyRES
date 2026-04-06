@@ -39,7 +39,7 @@ def unpack_kwargs(kwargs):
 # ==================================================================
 # ========================== PHYSICAL ROOM =========================
 
-def plot_room_setup(positions: OrderedDict):
+def plot_room_setup(positions: OrderedDict, which_to_plot: list[str], plot_legend: bool=False):
 
     # Always reset to default before updating
     plt.rcParams.update(plt.rcParamsDefault)
@@ -79,14 +79,33 @@ def plot_room_setup(positions: OrderedDict):
     ax_3d.yaxis.set_pane_color('white')
     ax_3d.zaxis.set_pane_color('white')
 
-    if len(stg) != 0: ax_3d.scatter(*zip(*stg), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
-    else: stg = torch.tensor([[0, 0, 0]])
-    if len(lds) != 0: ax_3d.scatter(*zip(*lds), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
-    else: lds = torch.tensor([[0, 0, 0]])
-    if len(mcs) != 0: ax_3d.scatter(*zip(*mcs), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
-    else: mcs = torch.tensor([[0, 0, 0]])
-    if len(aud) != 0: ax_3d.scatter(*zip(*aud), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
-    else: aud = torch.tensor([[0, 0, 0]])
+    if len(stg) != 0 and 'stg' in which_to_plot:
+        ax_3d.scatter(*zip(*stg), marker='s', color=colorPalette[0], edgecolors='k', s=100, label='Stage emitters')
+        for i, pos in enumerate(stg):
+            ax_3d.text(pos[0], pos[1], pos[2], f'{i+1}', color='black', ha='center', va='bottom')
+    else:
+        stg = torch.tensor([[0, 0, 0]])
+
+    if len(lds) != 0 and 'lds' in which_to_plot:
+        ax_3d.scatter(*zip(*lds), marker='s', color=colorPalette[1], edgecolors='k', s=100, label='System loudspeakers')
+        for i, pos in enumerate(lds):
+            ax_3d.text(pos[0], pos[1], pos[2], f'{i+1}', color='black', ha='center', va='bottom')
+    else:
+        lds = torch.tensor([[0, 0, 0]])
+
+    if len(mcs) != 0 and 'mcs' in which_to_plot:
+        ax_3d.scatter(*zip(*mcs), marker='o', color=colorPalette[2], edgecolors='k', s=100, label='System microphones')
+        for i, pos in enumerate(mcs):
+            ax_3d.text(pos[0], pos[1], pos[2], f'{i+1}', color='black', ha='center', va='bottom')
+    else:
+        mcs = torch.tensor([[0, 0, 0]])
+
+    if len(aud) != 0 and 'aud' in which_to_plot:
+        ax_3d.scatter(*zip(*aud), marker='o', color=colorPalette[3], edgecolors='k', s=100, label='Audience receivers')
+        for i, pos in enumerate(aud):
+            ax_3d.text(pos[0], pos[1], pos[2], f'{i+1}', color='black', ha='center', va='bottom')
+    else:
+        aud = torch.tensor([[0, 0, 0]])
 
     # Labels
     ax_3d.set_xlabel('x in meters', labelpad=15)
@@ -101,22 +120,25 @@ def plot_room_setup(positions: OrderedDict):
     ax_3d.set_box_aspect([room_x, room_y, room_z])
 
     # Plot orientation
-    ax_3d.view_init(30, 150)
+    ax_3d.view_init(70, 150)
 
     # Legend Plot
-    ax_3d.legend(
-        loc='center right',  # Center the legend in the legend plot
-        bbox_to_anchor=(2, 0.5),  # Position the legend outside the plot
-        handletextpad=0.1,
-        borderpad=0.2,
-        columnspacing=1.0,
-        borderaxespad=0.1,
-        handlelength=1
-    )
+    if plot_legend:
+        ax_3d.legend(
+            loc='center right',  # Center the legend in the legend plot
+            bbox_to_anchor=(2, 0.5),  # Position the legend outside the plot
+            handletextpad=0.1,
+            borderpad=0.2,
+            columnspacing=1.0,
+            borderaxespad=0.1,
+            handlelength=1
+        )
 
-    # Adjust layout
-    fig.tight_layout()
-    fig.subplots_adjust(left=0.00, top=1.3, right=0.5, bottom=-0.1)
+    # Adjust layout with reduced padding
+    fig.tight_layout(pad=0.5)
+    fig.subplots_adjust(left=-0.1, right=1.1, top=1.1, bottom=0.05)
+    if plot_legend:
+        fig.subplots_adjust(left=0.00, right=0.5, top=1.3, bottom=-0.1)
     plt.show()
 
     return None
@@ -124,7 +146,7 @@ def plot_room_setup(positions: OrderedDict):
 # ==================================================================
 # ====================== ACOUSTICAL ANALYSIS =======================
 
-def plot_matrix_on_ax(
+def _matrix_on_ax(
     ax,
     matrix_2d: torch.Tensor,
     norm,
@@ -159,7 +181,6 @@ def plot_matrices(
     matrix_titles: list[str]=None,
     matrices_distribution: list[int]=None
 ):
-
     if isinstance(matrices, OrderedDict):
         matrices = list(matrices.values())
     n_matrices = len(matrices)
@@ -202,7 +223,7 @@ def plot_matrices(
     width_ratios = []
     fig_width = 0
     counter_width = 0
-    for _ in range(n_rows):
+    for _ in range(n_cols):
         width = matrices[counter_width].shape[2]
         fig_width += width
         width_ratios.append(width)
@@ -210,7 +231,7 @@ def plot_matrices(
     height_ratios = []
     fig_height = 0
     counter_height = 0
-    for _ in range(n_cols):
+    for _ in range(n_rows):
         height = matrices[counter_height].shape[1]
         fig_height += height
         height_ratios.append(height)
@@ -232,7 +253,7 @@ def plot_matrices(
         constrained_layout=True
     )
 
-    # 🔑 Normalize axes handling
+    # Normalize axes handling
     if n_matrices == 1:
         axs = [axs]
     else:
@@ -250,7 +271,7 @@ def plot_matrices(
             vmax = torch.ceil(vmax * 10) / 10
             norm = colors.Normalize(vmin=vmin, vmax=vmax)
 
-        im = plot_matrix_on_ax(
+        im = _matrix_on_ax(
             ax=axs[matrix],
             matrix_2d=matrices[matrix].squeeze(0),
             norm=norm,
@@ -294,7 +315,7 @@ def plot_matrices(
             images[0],
             ax=axs[:n_matrices],
             label=fig_colorbar_label,
-            aspect=15,
+            aspect=30,
             pad=0.02
         )
         # Format tick labels to 1 decimal digit
@@ -309,39 +330,213 @@ def plot_matrices(
 
     plt.show(block=True)
 
+    return None
+
 # ==================================================================
 # =========================== STATISTICS ===========================
 
-def plot_distributions(distributions: torch.Tensor, n_bins: int, labels: list[str] = None, log_scale: bool = False):
+def _distribution_on_ax(
+    ax,
+    distributions_2d: torch.Tensor,
+    n_bins: int,
+    colors: list[str] = None,
+    log_scale: bool = False,
+    x_label: str = None,
+    y_label: str = None,
+    title: str = None
+) -> None:
+    """
+    Plot multiple overlapping histograms on a single axes.
 
-    # Always reset to default before updating
-    plt.rcParams.update(plt.rcParamsDefault)
+    Args:
+        ax: Matplotlib axes object
+        distributions_2d (torch.Tensor): Tensor of shape (m, n) where m is number of samples
+            and n is number of distributions to plot
+        n_bins (int): Number of bins for histograms
+        colors (list[str], optional): Colors for each histogram. Defaults to None.
+        labels (list[str], optional): Labels for each histogram. Defaults to None.
+        log_scale (bool, optional): Whether to use log scale. Defaults to False.
+        x_label (str, optional): X-axis label. Defaults to None.
+        y_label (str, optional): Y-axis label. Defaults to None.
+        title (str, optional): Title for the axes. Defaults to None.
+    """
     
-    if labels is None:
-        labels = [f'Distribution {i+1}' for i in range(distributions.shape[1])]
-
-    plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
-    colorPalette = sns.color_palette("muted", n_colors=distributions.shape[1])
+    if distributions_2d.dim() == 1:
+        distributions_2d = distributions_2d.unsqueeze(1)
     
-    plt.figure(figsize=(7, 5))
-    for i in range(distributions.shape[1]):
-        plt.hist(
-            distributions[:,i].squeeze(),
+    n_distributions = distributions_2d.shape[1]
+    
+    if colors is None:
+        colors = [None] * n_distributions
+    
+    for i in range(n_distributions):
+        ax.hist(
+            distributions_2d[:, i],
             bins=n_bins,
-            label=labels[i],
-            color=colorPalette[i],
+            color=colors[i],
             alpha=0.7,
             density=True,
             histtype='stepfilled',
             edgecolor='black',
             log=log_scale
         )
-    plt.legend(loc='upper left')
-    plt.xlabel('Value in dB')
-    plt.ylabel('Density')
-    plt.tight_layout()
 
-    plt.show()
+    if title is not None:
+        ax.set_title(title)
+
+    if x_label is not None:
+        ax.set_xlabel(x_label)
+
+    if y_label is not None:
+        ax.set_ylabel(y_label)
+
+    return None
+
+def plot_distributions(
+    distributions: list[torch.Tensor],
+    n_bins: int,
+    labels: list[str] = None,
+    log_scale: bool = False,
+    distribution_titles: list[str] = None,
+    distributions_distribution: list[int] = None,
+    fig_title: str = None,
+    fig_x_label: str = None,
+    fig_y_label: str = None
+) -> None:
+    """
+    Plot multiple distributions in a grid layout.
+
+    Args:
+        distributions (list[torch.Tensor]): List of torch.Tensor objects of shape (m, n),
+            where m is the number of samples and n is the number of overlapping histograms
+            to plot on each subplot. Each tensor can have different m and n values.
+        n_bins (int): Number of bins for histograms
+        labels (list[str], optional): Labels for the histograms. These labels apply to all subplots.
+            Length should match the number of histograms per subplot. Defaults to None.
+        log_scale (bool, optional): Whether to use log scale. Defaults to False.
+        distribution_titles (list[str], optional): Titles for each subplot. Defaults to None.
+        distributions_distribution (list[int], optional): [n_rows, n_cols] for layout. Defaults to None (auto).
+        fig_title (str, optional): Overall figure title. Defaults to None.
+        fig_x_label (str, optional): Overall x-axis label. Defaults to None.
+        fig_y_label (str, optional): Overall y-axis label. Defaults to None.
+    """
+
+    # ---- Matplotlib style ----
+    plt.rcParams.update(plt.rcParamsDefault)
+    plt.rcParams.update({
+        'font.family': 'serif',
+        'font.size': 18,
+        'font.weight': 'heavy',
+        'text.usetex': True
+    })
+
+    n_subplots = len(distributions)
+    colorPalette = sns.color_palette("muted", n_colors=10)  # Use larger palette for flexibility
+
+    # ---- Layout ----
+    if distributions_distribution is None:
+        n_cols = int(torch.ceil(torch.sqrt(torch.tensor(n_subplots))))
+        n_rows = int(torch.ceil(torch.tensor(n_subplots / n_cols)))
+    else:
+        assert len(distributions_distribution) == 2
+        n_rows = distributions_distribution[0]
+        n_cols = distributions_distribution[1]
+
+    fig, axs = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(4*n_cols, 3*n_rows + 1),
+        constrained_layout=False
+    )
+
+    # Normalize axes handling
+    if n_subplots == 1:
+        axs = [axs]
+    else:
+        axs = axs.flatten()
+
+    # ---- Calculate global x-axis limits ----
+    # Flatten all distributions to find global min/max (excluding outliers)
+    all_values = []
+    for dist in distributions:
+        all_values.append(dist.flatten())
+    all_values = torch.cat(all_values)
+    
+    # Calculate x-axis bounds using numpy for better memory efficiency with large arrays
+    # Convert to numpy to use numpy's quantile (more efficient for large data)
+    all_values_np = all_values.cpu().numpy()
+    
+    # Lower bound: Q1 - 1.5*IQR (standard outlier definition)
+    q1 = np.quantile(all_values_np, 0.25)
+    q3 = np.quantile(all_values_np, 0.75)
+    iqr = q3 - q1
+    x_min = q1 - 1.5 * iqr
+    
+    # Upper bound: max value + 5 dB
+    x_max = (torch.max(all_values)).item()
+
+    for i in range(n_subplots):
+        # Get the colors for histograms in this subplot
+        n_histograms = distributions[i].shape[1] if distributions[i].dim() > 1 else 1
+        subplot_colors = [colorPalette[j % len(colorPalette)] for j in range(n_histograms)]
+        
+        _distribution_on_ax(
+            ax=axs[i],
+            distributions_2d=distributions[i],
+            n_bins=n_bins,
+            colors=subplot_colors,
+            log_scale=log_scale,
+            title=distribution_titles[i] if distribution_titles is not None else None
+        )
+        
+        # Apply global x-axis limits
+        axs[i].set_xlim(x_min, x_max)
+
+    # ---- Remove ticks from non-edge axes ----
+    for i in range(n_subplots):
+        row = i // n_cols
+        
+        # Remove x-ticks for axes not in the bottom row
+        if row != n_rows - 1:
+            axs[i].set_xticks([])
+
+    # Remove unused axes
+    for ax in axs[n_subplots:]:
+        ax.remove()
+
+    # Create common legend at the top (before tight_layout to avoid clipping)
+    if labels:
+        # Create legend handles using the color palette
+        legend_handles = [plt.Rectangle((0,0),1,1, facecolor=colorPalette[j % len(colorPalette)], 
+                                       alpha=0.7, edgecolor='black') 
+                         for j in range(len(labels))]
+        fig.legend(
+            legend_handles,
+            labels,
+            loc='upper center',
+            bbox_to_anchor=(0.5, 0.95),
+            ncol=min(len(labels), 5),
+            frameon=True
+        )
+
+    if fig_title is not None:
+        fig.suptitle(fig_title, y=0.995)
+    
+    # Set common x and y labels using supxlabel and supylabel
+    if fig_x_label is None:
+        fig.supxlabel('Value in dB')
+    else:
+        fig.supxlabel(fig_x_label)
+    
+    if fig_y_label is None:
+        fig.supylabel('Density')
+    else:
+        fig.supylabel(fig_y_label)
+
+    # Use tight_layout with rect to reserve space for the legend
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
+
+    plt.show(block=True)
 
     return None
 

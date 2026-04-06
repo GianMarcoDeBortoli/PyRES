@@ -3,11 +3,14 @@
 import numpy as np
 from decayfitnet.toolbox import DecayFitNetToolbox
 from decayfitnet.toolbox.core import PreprocessRIR
+from scipy.special import erfc
 import pyfar as pf
 import pyrato as pr
 import torch
 # PyRES
 from PyRES.utils import expand_to_dimension, find_direct_path
+
+import matplotlib.pyplot as plt
 
 # ==================================================================
 # ===================== OCTAVE BANDS ANALYSIS ======================
@@ -37,7 +40,7 @@ def _octave_band_filter(signal: torch.Tensor, fs: int, octave_bands: int | str='
 
     return signal
 
-def octave_band_filter(signal: torch.Tensor, fs: int, octave_bands: int, frequency_range: tuple=(125.0, 8000.0)) -> pf.Signal:
+def octave_band_filter(signal: torch.Tensor, fs: int, octave_bands: int, frequency_range: tuple=(125.0, 8000.0)) -> torch.Tensor:
     f"""
     Applies octave band filtering to the input signal.
 
@@ -224,7 +227,7 @@ def reverberation_time(rirs: torch.Tensor, fs: int, decay_interval: str='T30', o
 
     return rt
 
-def reverberation_time_multislope(rirs: torch.Tensor, fs: int, n_slopes: int=2, decay_interval: str='T30', octave_bands: int | str='broadband', frequency_range: tuple=(125.0, 8000.0)) -> torch.Tensor:
+def reverberation_time_multislope(rirs: torch.Tensor, fs: int, n_slopes: int=2, octave_bands: int | str='broadband', frequency_range: tuple=(125.0, 8000.0)) -> torch.Tensor:
     f"""
     Computes the reverberation time of a room impulse response matrix.
 
@@ -254,7 +257,6 @@ def reverberation_time_multislope(rirs: torch.Tensor, fs: int, n_slopes: int=2, 
             rir_preprocessing = PreprocessRIR(sample_rate=fs, filter_frequencies=center_frequencies)
             # Schroeder integration, analyse_full_rir: if RIR onset should be detected, set this to False
             true_edc, __ = rir_preprocessing.schroeder(rir, analyse_full_rir=True)
-            time_axis = (torch.linspace(0, true_edc.shape[2] - 1, true_edc.shape[2]) / fs)
             # Permute into [n_bands, n_batches, n_samples]
             true_edc = true_edc.permute(1, 0, 2)
             # Prepare the model
@@ -460,3 +462,115 @@ def lateral_energy_fraction(rirs: torch.Tensor, fs: int) -> torch.Tensor:
             lef[0,i,j] = np.mean(energy_fig8 / energy_omni)
 
     return torch.tensor(lef)
+
+
+def mixing_time_matrix(rirs: torch.Tensor, fs: int) -> torch.Tensor:
+
+    rirs = expand_to_dimension(rirs, 3)
+
+    mt = np.zeros([1, rirs.shape[1], rirs.shape[2]])
+
+    for i in range(rirs.shape[1]):
+        for j in range(rirs.shape[2]):
+            rir = rirs[:,i,j]
+
+            direct_path = find_direct_path(impulse_response=rir, fs=fs)
+            mt_temp = mixing_time(ir=rir[direct_path:].numpy(), fs=fs)
+
+            mt[:,i,j] = direct_path + mt_temp / 1000.0 * fs
+
+    return torch.tensor(mt)
+
+def mixing_time(
+    ir: torch.Tensor,
+    n: int = 1024,
+    fs: float = 48000.0,
+    pre_delay: int = 0,
+    mixing_thresh: float = 1.0,
+    hop: int = 500,
+) -> None:
+    """Echo density and mixing time (Abel & Huang 2006).
+
+    Computes the transition time between early reflections and stochastic
+    reverberation assuming sound pressure in a reverberant field is
+    Gaussian distributed.
+
+    Reference: Abel & Huang (2006), "A simple, robust measure of
+    reverberation echo density", Proc. 121st AES Convention, San Francisco.
+
+    Parameters
+    ----------
+    ir : array-like
+        Impulse response (1 channel only). Converted to 1D.
+    n : int, optional
+        Window length (must be even). Default 1024.
+    fs : float, optional
+        Sampling rate in Hz. Default 48000.
+    pre_delay : int, optional
+        Onset delay in samples for mixing time. Default 0.
+    mixing_thresh : float, optional
+        Normalized echo density threshold for mixing time (Abel & Huang use 1).
+        Default 1.0.
+    hop : int, optional
+        Hop size in samples for sparse analysis. Default 500.
+
+    Returns
+    -------
+    t_abel : float
+        Mixing time in milliseconds (time at which echo density first
+        exceeds mixing_thresh, relative to pre_delay). 0 if not found.
+    echo_dens : np.ndarray
+        Echo density vector (length = len(ir)), normalized; interpolated
+        from sparse analysis.
+    """
+    ir_arr = np.asarray(ir, dtype=float).ravel()
+    len_ir = len(ir_arr)
+    if n % 2 != 0:
+        raise ValueError("Window length n must be even.")
+    if len_ir < n:
+        raise ValueError(
+            f"IR length {len_ir} is shorter than analysis window {n}. "
+            "Provide at least an IR of some 100 ms."
+        )
+    half_win = n // 2
+    w_tau = np.hanning(n)
+    w_tau = w_tau / np.sum(w_tau)
+
+    sparse_ind = np.arange(0, len_ir, hop, dtype=int)
+    if sparse_ind[-1] != len_ir - 1 and len_ir - 1 not in sparse_ind:
+        sparse_ind = np.append(sparse_ind, len_ir - 1)
+    echo_dens_sparse = np.zeros(len(sparse_ind))
+
+    for ii, n_center in enumerate(sparse_ind):
+        if n_center <= half_win:
+            h_tau = ir_arr[0 : n_center + half_win]
+            w_t = w_tau[-(n_center + half_win) :]
+        elif n_center <= len_ir - half_win - 1:
+            h_tau = ir_arr[n_center - half_win : n_center + half_win]
+            w_t = w_tau.copy()
+        else:
+            h_tau = ir_arr[n_center - half_win : len_ir]
+            w_t = w_tau[: len(h_tau)].copy()
+
+        s = np.sqrt(np.sum(w_t * (h_tau ** 2)))
+        tip_ct = (np.abs(h_tau) > s).astype(float)
+        echo_dens_sparse[ii] = np.sum(w_t * tip_ct)
+
+    echo_dens_sparse = echo_dens_sparse / erfc(1.0 / np.sqrt(2))
+    echo_dens = np.interp(
+        np.arange(len_ir, dtype=float),
+        sparse_ind.astype(float),
+        echo_dens_sparse,
+    )
+
+    d = np.where(echo_dens > mixing_thresh)[0]
+    if d.size > 0:
+        first_idx = int(d[0])
+        t_abel = (first_idx - pre_delay) / fs * 1000.0
+        if t_abel < 0:
+            t_abel = 0.0
+    else:
+        t_abel = 0.0
+        Warning("Mixing time not found within given limits.", UserWarning)
+
+    return float(t_abel) #, echo_dens

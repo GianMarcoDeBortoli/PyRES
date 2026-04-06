@@ -255,24 +255,37 @@ class RES(object):
     # ==================================================================================
     # ================================= FEEDBACK LOOP ==================================
 
-    def open_loop(self)-> system.Series:
+    def open_loop(self, state: str='mcs')-> system.Series:
         r"""
         Generates the system open loop.
+
+            **Args**:
+                - state (str, optional): state variable defining the point of start and end of the open-loop. Defaults to 'mcs'. Possible values are 'mcs' and 'lds', corresponding microphones and loudspeakers, respectively.
 
             **Returns**:
                 - system.Series: Series object instance implementing the system open loop.
         """
-        modules = OrderedDict([
-            ('V_ML', self.get_v_ML()),
-            ('G', self.get_G()),
-            ('H_LM', self.get_h_LM())
-        ])
+        if state == 'mcs':
+            modules = OrderedDict([
+                ('V_ML', self.get_v_ML()),
+                ('G', self.get_G()),
+                ('H_LM', self.get_h_LM())
+            ])
+        elif state == 'lds':
+            modules = OrderedDict([
+                ('H_LM', self.get_h_LM()),
+                ('V_ML', self.get_v_ML()),
+                ('G', self.get_G())
+            ])
 
         return system.Series(modules)
     
-    def open_loop_responses(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def open_loop_responses(self, state: str='mcs') -> tuple[torch.Tensor, torch.Tensor]:
         r"""
         Computes the time- and frequency-response matrices of the open-loop.
+
+            **Args**:
+                - state (str, optional): state variable defining the point of start and end of the open-loop. Defaults to 'mcs'. Possible values are 'mcs' and 'lds', corresponding microphones and loudspeakers, respectively.
 
             **Returns**:
                 - torch.Tensor: time responses [samples, n_M, n_M].
@@ -280,9 +293,14 @@ class RES(object):
         """
 
         # Generate open loop
-        open_loop = system.Shell(
-            core=self.open_loop()
-        )
+        if state == 'mcs':
+            open_loop = system.Shell(
+                core=self.open_loop(state=state)
+            )
+        elif state == 'lds':
+            open_loop = system.Shell(
+                core=self.open_loop(state=state)
+            )
         
         with torch.no_grad():
             # Compute open-loop time and frequency responses
