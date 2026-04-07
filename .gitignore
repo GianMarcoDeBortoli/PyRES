@@ -171,5 +171,7 @@ cython_debug/
 /training_output
 
 # PyRES
-/model_states
+/local_tests
 /dataRES
+main.py
+/audio_files

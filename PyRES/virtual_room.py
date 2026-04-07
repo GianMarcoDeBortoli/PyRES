@@ -13,7 +13,7 @@ from PyRES.functional import modal_reverb, one_pole_filter
 # ==================================================================
 # =========================== BASE CLASS ===========================
 
-class VrRoom(object):
+class _VrRoom(object):
     r"""
     Base class for virtual-room implementations.
     """
@@ -104,7 +104,7 @@ class VrRoom(object):
 # ==================================================================
 # ============================ MATRICES ============================
 
-class unitary_parallel_connections(VrRoom):
+class unitary_parallel_connections(_VrRoom):
     r"""
     Unitary parallel connections for systems with independent channels.
     It can only be paired to a physical room with n_L = n_M.
@@ -128,12 +128,12 @@ class unitary_parallel_connections(VrRoom):
                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
 
             **Attributes**:
-                [- VrRoom attributes]
+                [- _VrRoom attributes]
         """
         
         assert n_M == n_L, "The number of system microphones and the number of system loudspeakers must be equal for unitary_independent_connections"
 
-        VrRoom.__init__(
+        _VrRoom.__init__(
             self,
             n_M=n_M,
             n_L=n_L,
@@ -151,7 +151,7 @@ class unitary_parallel_connections(VrRoom):
         )
 
 
-class unitary_mixing_matrix(VrRoom):
+class unitary_mixing_matrix(_VrRoom):
     r"""
     Unitary mixing matrix for systems with non-independent channels.
     """
@@ -175,10 +175,10 @@ class unitary_mixing_matrix(VrRoom):
                 - alias_decay_db (float): Anti-time-aliasing decay [dB].
 
             **Attributes**:
-                [- VrRoom attributes]
+                [- _VrRoom attributes]
         """
 
-        VrRoom.__init__(
+        _VrRoom.__init__(
             self,
             n_M=n_M,
             n_L=n_L,
@@ -200,7 +200,7 @@ class unitary_mixing_matrix(VrRoom):
 # ==================================================================
 # ==================== FINITE IMPULSE RESPONSE =====================
 
-class random_FIRs(VrRoom):
+class random_FIRs(_VrRoom):
     r"""
     Random FIR filter of given order. Learnable coefficients.
     Reference:
@@ -231,11 +231,11 @@ class random_FIRs(VrRoom):
                 - requires_grad (bool): Whether the filter is learnable.
 
             **Attributes**:
-                [- VrRoom attributes]
+                [- _VrRoom attributes]
                 - FIR_order (int): FIR filter order.
         """
 
-        VrRoom.__init__(
+        _VrRoom.__init__(
             self,
             n_M=n_M,
             n_L=n_L,
@@ -255,7 +255,7 @@ class random_FIRs(VrRoom):
         )
 
 
-class phase_cancellation(VrRoom):
+class phase_cancellation(_VrRoom):
     r"""
     Phase cancelling modal reverb. Learnable phases.
     Reference:
@@ -292,10 +292,10 @@ class phase_cancellation(VrRoom):
                 - requires_grad (bool): Whether the filter is learnable.
             
             **Attributes**:
-                [- VrRoom attributes]
+                [- _VrRoom attributes]
         """
 
-        VrRoom.__init__(
+        _VrRoom.__init__(
             self,
             n_M=n_M,
             n_L=n_L,
@@ -322,7 +322,7 @@ class phase_cancellation(VrRoom):
 # ==================================================================
 # ======================= RECURSIVE FILTERS ========================
 
-class FDN(VrRoom):
+class FDN(_VrRoom):
     r"""
     Feedback delay network.
     """
@@ -351,13 +351,13 @@ class FDN(VrRoom):
                 - t60_NY (float): Reverberation time at Nyquist frequency [s].
 
             **Attributes**:
-                [- VrRoom attributes]
+                [- _VrRoom attributes]
                 - order (int): Order of the feedback delay network.
                 - t60_DC (float): Reverberation time at 0 Hz [s].
                 - t60_NY (float): Reverberation time at Nyquist frequency [s].
         """
 
-        VrRoom.__init__(
+        _VrRoom.__init__(
             self,
             n_M=n_M,
             n_L=n_L,
@@ -439,7 +439,7 @@ class FDN(VrRoom):
         return recursion
 
 
-class unitary_reverberator(VrRoom):
+class unitary_reverberator(_VrRoom):
     r"""
     Unitary reverberator.
     Reference:
@@ -470,11 +470,11 @@ class unitary_reverberator(VrRoom):
                 - t60 (float): Reverberation time [s].
 
             **Attributes**:
-                [- VrRoom attributes]
+                [- _VrRoom attributes]
                 - t60 (float): Reverberation time [s].
         """
 
-        VrRoom.__init__(
+        _VrRoom.__init__(
             self,
             n_M=n_M,
             n_L=n_L,

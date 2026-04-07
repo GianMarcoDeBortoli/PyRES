@@ -2,10 +2,11 @@
 # ============================ IMPORTS =============================
 from collections import OrderedDict
 import json
+import numpy as np
 # PyTorch
 import torch, torchaudio
 # PyRES
-from PyRES.functional import energy_coupling
+from PyRES.acoustics_analysis import energy_coupling
 
 
 # ==================================================================
@@ -405,10 +406,10 @@ def normalize_rirs(
             - torch.Tensor: Normalized room impulse responses bewteen system emitters and system receivers.
     """
     # Energy coupling
-    ec_stg_aud = energy_coupling(rir=stg_to_aud, fs=fs, decay_interval='T30')
-    ec_stg_sys = energy_coupling(rir=stg_to_sys, fs=fs, decay_interval='T30')
-    ec_sys_aud = energy_coupling(rir=sys_to_aud, fs=fs, decay_interval='T30')
-    ec_sys_sys = energy_coupling(rir=sys_to_sys, fs=fs, decay_interval='T30')
+    ec_stg_aud = np.power(10, energy_coupling(rirs=stg_to_aud, fs=fs)/10)
+    ec_stg_sys = np.power(10, energy_coupling(rirs=stg_to_sys, fs=fs)/10)
+    ec_sys_aud = np.power(10, energy_coupling(rirs=sys_to_aud, fs=fs)/10)
+    ec_sys_sys = np.power(10, energy_coupling(rirs=sys_to_sys, fs=fs)/10)
 
     # Norm factor - energy misbalance in recording set
     norm_stg = torch.mean(torch.hstack([ec_stg_aud.flatten(), ec_stg_sys.flatten()]))

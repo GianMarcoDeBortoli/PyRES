@@ -24,8 +24,6 @@ pyfar = "0.7.2"
 pyrato = "0.4.0"
 seaborn = "0.13.2"
 matplotlib = "3.10.1"
-pyqt5 = "5.15.11"
-pyqt6 = "6.9.0"
 pysoundfile = "0.9.0"
 
 [build-system]
