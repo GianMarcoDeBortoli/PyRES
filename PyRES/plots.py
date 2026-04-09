@@ -203,7 +203,7 @@ def plot_matrices(
     fig_width = 0
     counter_width = 0
     for _ in range(n_rows):
-        width = matrices[counter_width].shape[2]
+        width = matrices[counter_width].shape[1]
         fig_width += width
         width_ratios.append(width)
         counter_width += 1
@@ -211,7 +211,7 @@ def plot_matrices(
     fig_height = 0
     counter_height = 0
     for _ in range(n_cols):
-        height = matrices[counter_height].shape[1]
+        height = matrices[counter_height].shape[0]
         fig_height += height
         height_ratios.append(height)
         counter_height += n_cols
@@ -267,11 +267,11 @@ def plot_matrices(
         if col != 0:            # not left column
             axs[matrix].set_yticks([])
         else:
-            axs[matrix].set_yticks(ticks=np.arange(matrices[matrix].shape[1]), labels=np.arange(matrices[matrix].shape[1])+1)
+            axs[matrix].set_yticks(ticks=np.arange(matrices[matrix].shape[0]), labels=np.arange(matrices[matrix].shape[0])+1)
         if row != n_rows - 1:   # not bottom row
             axs[matrix].set_xticks([])
         else:
-            axs[matrix].set_xticks(ticks=np.arange(matrices[matrix].shape[2]), labels=np.arange(matrices[matrix].shape[2])+1)
+            axs[matrix].set_xticks(ticks=np.arange(matrices[matrix].shape[1]), labels=np.arange(matrices[matrix].shape[1])+1)
         if not common_colorbar:
             cbar = fig.colorbar(
                 im,
@@ -544,3 +544,81 @@ def plot_edcs(edcs: torch.Tensor, fs: int) -> None:
     plt.show(block=True)
 
     return None
+
+
+def project(azi_ele):
+    """Hammer-Aidhof projection"""
+    azi, ele = azi_ele[:, 0], azi_ele[:, 1]
+
+    proj = lambda x,y: np.column_stack((-np.cos(y) * np.sin(x / 2), 0.5 * np.sin(y))) / np.tile(np.sqrt(1 + np.cos(y) * np.cos(x / 2)), (2,1)).T
+
+    return proj(np.mod(azi + np.pi, 2*np.pi) - np.pi, ele)
+
+
+def draw_grid(ax):
+    linegray = 0.7
+    azi_grid = np.deg2rad(np.array([0, 30, 60, 90, 120, 150, 180, -30, -60, -120, -150, -90, 179.9]))
+    ele_grid = np.deg2rad(np.array([-60, -30, 0, 30, 60]))
+
+    for azi in azi_grid:
+        ele = np.linspace(-np.pi/2, np.pi/2, 50)
+        xy = project(np.column_stack((np.full_like(ele, azi), ele)))
+        # draw grid with low z-order so it stays behind markers
+        ax.plot(xy[:, 0], xy[:, 1], '--', color=[linegray]*3, zorder=0)
+        ax.text(xy[25, 0], 0, f"{np.degrees(azi):.0f}", fontsize=8, color=[linegray]*3, zorder=0)
+
+    for ele in ele_grid:
+        azi = np.linspace(-np.pi, np.pi, 50)
+        xy = project(np.column_stack((azi, np.full_like(azi, ele))))
+        ax.plot(xy[:, 0], xy[:, 1], '--', color=[linegray]*3, zorder=0)
+        ax.text(0, xy[25, 1], f"{np.degrees(ele):.0f}", fontsize=8, color=[linegray]*3, zorder=0)
+
+
+def plot_sdm_doa(pressure, doa_sph, fs=48000, title=None):
+
+    n_rows = pressure.shape[1]
+    n_cols = pressure.shape[2]
+    fig, axs = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(5, 7),
+        constrained_layout=True
+    )
+
+    axs = np.atleast_1d(axs).flatten()
+    for ax in axs:
+        ax.set_axisbelow(True)
+        draw_grid(ax)
+        ax.set_aspect('equal', 'box')
+        ax.set_axis_off()
+        ax.set_xlim([-1.1, 1.1])
+        ax.set_ylim([-1.1, 1.1])
+
+    pressure_tensor = pressure if torch.is_tensor(pressure) else torch.tensor(pressure)
+    pressure_np = pressure_tensor.detach().cpu().numpy()
+    pressure_mag = np.abs(pressure_np)
+    pressure_mag = pressure_mag / (np.max(pressure_mag) + 1e-10)
+    pressure_db = 20 * np.log10(pressure_mag) + 60
+    pressure_db[pressure_db < 0] = 0
+
+    doa_np = doa_sph.detach().cpu().numpy() if torch.is_tensor(doa_sph) else np.asarray(doa_sph)
+
+    phi_circle = np.linspace(0, 2 * np.pi, 100)
+    x_circle, y_circle = np.cos(phi_circle), np.sin(phi_circle)
+
+    for t in range(pressure_mag.shape[0]):
+        for i in range(n_rows):
+            for j in range(n_cols):
+                r_val = pressure_db[t, i, j]
+                if r_val == 0:
+                    continue
+                azi_ele = doa_np[t, i, j, 0:2]
+                xy = project(azi_ele.reshape(1, -1))
+                r = 0.02 * (r_val/60)**2
+                ax = axs[i * n_cols + j]
+                ax.fill(xy[0, 0] + r * x_circle, xy[0, 1] + r * y_circle, color='k', alpha=0.6, zorder=3)
+
+    if title:
+        fig.suptitle(title)
+
+    return fig

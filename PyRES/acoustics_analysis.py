@@ -1,7 +1,7 @@
 # ==================================================================
 # ============================ IMPORTS =============================
 import numpy as np
-from decayfitnet.toolbox import DecayFitNetToolbox
+from decayfitnet.toolbox.DecayFitNetToolbox import DecayFitNetToolbox
 from decayfitnet.toolbox.core import PreprocessRIR
 import pyfar as pf
 import pyrato as pr
@@ -460,3 +460,59 @@ def lateral_energy_fraction(rirs: torch.Tensor, fs: int) -> torch.Tensor:
             lef[0,i,j] = np.mean(energy_fig8 / energy_omni)
 
     return torch.tensor(lef)
+
+def pseudo_intensity_vector(rirs: torch.Tensor) -> torch.Tensor:
+    f"""
+    Computes the lateral energy fraction of a room impulse response matrix.
+
+        **Args**:
+            - rirs (torch.Tensor): Room impulse responses.
+            - fs (int): Sampling frequency [Hz].
+
+        **Returns**:
+            - torch.Tensor: Direct-to-reverberant ratio.
+    """
+
+    rirs = expand_to_dimension(rirs, 4)
+
+    # Enconde A-format to B-format
+    conversion_matrix = torch.tensor([[1, 1, 1, 1],
+                                      [1,-1,-1, 1],
+                                      [1, 1,-1,-1],
+                                      [1,-1, 1,-1]])
+    conversion_matrix = 1/(2*torch.sqrt(torch.tensor([4*torch.pi]))) * torch.matmul( conversion_matrix, torch.diag(torch.tensor([1,3,3,3])) )
+
+    rirs = torch.matmul(rirs, conversion_matrix)
+
+    pressure_signal = rirs[:,:,:,0]
+    particle_velocity_x = rirs[:,:,:,3]
+    particle_velocity_y = rirs[:,:,:,1]
+    particle_velocity_z = rirs[:,:,:,2]
+
+    pseudo_intensity_vector = pressure_signal.unsqueeze(-1) * torch.stack((particle_velocity_x, particle_velocity_y, particle_velocity_z), dim=-1)
+
+    return pseudo_intensity_vector, pressure_signal, particle_velocity_x, particle_velocity_y, particle_velocity_z
+
+def sdm_doa(pseudo_intensity_vector: torch.Tensor) -> torch.Tensor:
+    f"""
+    Computes the direction of arrival (DOA) from the pseudo-intensity vector.
+
+        **Args**:
+            - pi_v (torch.Tensor): Pseudo-intensity vector.
+
+        **Returns**:
+            - torch.Tensor: DOA in spherical coordinates (azimuth, elevation, radius).
+    """
+    pseudo_intensity_vector = pseudo_intensity_vector / (torch.norm(pseudo_intensity_vector, dim=-1, keepdim=True) + 1e-10)
+
+    x = pseudo_intensity_vector[:,:,:,0]
+    y = pseudo_intensity_vector[:,:,:,1]
+    z = pseudo_intensity_vector[:,:,:,2]
+
+    azimuth = torch.atan2(y, x)
+    radius = torch.sqrt(x**2 + y**2 + z**2)
+    elevation = torch.asin(z / (radius + 1e-10))
+
+    doa = torch.stack((azimuth, elevation, radius), dim=-1)
+
+    return doa
