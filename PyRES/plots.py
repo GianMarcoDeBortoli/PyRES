@@ -484,7 +484,7 @@ def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, n
 # ==================================================================
 # ========================= ROOM GLIVELAB ==========================
 
-def plot_edcs(edcs: torch.Tensor, fs: int) -> None:
+def plot_edcs(edcs: torch.Tensor, fs: int, plot_legend: bool = False) -> None:
 
     edcs_db = 10*torch.log10(edcs)
     edcs_db = edcs_db - torch.max(edcs_db)
@@ -496,7 +496,9 @@ def plot_edcs(edcs: torch.Tensor, fs: int) -> None:
     # Always reset to default before updating
     plt.rcParams.update(plt.rcParamsDefault)
     plt.rcParams.update({'font.family':'serif', 'font.size':20, 'font.weight':'heavy', 'text.usetex':True})
-    colorPalette = sns.color_palette("muted", n_colors=n_curves)
+    colorPalette = sns.color_palette("muted", n_colors=10)
+    colorPalette = [colorPalette[0], colorPalette[3], colorPalette[2], colorPalette[8], colorPalette[4]]
+    
 
     fig, ax = plt.subplots(figsize=(7,3.9))
 
@@ -524,6 +526,8 @@ def plot_edcs(edcs: torch.Tensor, fs: int) -> None:
         borderpad=0.3
     )
 
+    legend_handles = []
+
     for i in range(n_curves):
         axins.plot(
             t_axis,
@@ -531,17 +535,32 @@ def plot_edcs(edcs: torch.Tensor, fs: int) -> None:
             color=colorPalette[i],
             linewidth=2
         )
+        legend_handles.append(plt.Line2D([0], [0], color=colorPalette[i], linewidth=4))
+
 
     # ZOOM REGION — tweak these for your needs
     axins.set_xlim([-0.01, 0.4])   # seconds
-    axins.set_ylim([-25, -5])     # dB
+    axins.set_ylim([-25, -10])     # dB
 
     axins.grid()
     axins.tick_params(labelsize=10)
-    # fig.legend(["Setting 1", "Setting 2", "Setting 3", "Setting 4", "Setting 5"], loc='outside upper center', ncols=3)#, bbox_to_anchor=(0.6,0.4))
 
-    plt.tight_layout(rect=(0,0,1,1))
-    plt.show(block=True)
+    curve_labels = ["Setting 1", "Setting 2", "Setting 3", "Setting 4", "Setting 5"]
+    # fig.legend(["Setting 1", "Setting 2", "Setting 3", "Setting 4", "Setting 5"], loc='outside upper center', ncols=3)#, bbox_to_anchor=(0.6,0.4))
+    if plot_legend:
+        fig.legend(
+            legend_handles,
+            curve_labels,
+            loc='upper center',
+            bbox_to_anchor=(0.5, 1.05),
+            ncol=3,
+            frameon=False
+        )
+        plt.tight_layout(rect=(0,-0.05,1,0.9))
+    else:
+        plt.tight_layout(rect=(0,-0.04,1,1.05))
+
+    # plt.show(block=True)
 
     return None
 
