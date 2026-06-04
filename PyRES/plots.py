@@ -4,7 +4,7 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 from matplotlib import mlab, colors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, FixedFormatter
 import seaborn as sns
 import numpy as np
 # PyTorch
@@ -202,7 +202,7 @@ def plot_matrices(
     width_ratios = []
     fig_width = 0
     counter_width = 0
-    for _ in range(n_rows):
+    for _ in range(n_cols):
         width = matrices[counter_width].shape[1]
         fig_width += width
         width_ratios.append(width)
@@ -210,7 +210,7 @@ def plot_matrices(
     height_ratios = []
     fig_height = 0
     counter_height = 0
-    for _ in range(n_cols):
+    for _ in range(n_rows):
         height = matrices[counter_height].shape[0]
         fig_height += height
         height_ratios.append(height)
@@ -221,7 +221,6 @@ def plot_matrices(
     min_idx = np.argmin(fig_size)
     fig_size[min_idx] = fig_size[min_idx] * (max_fig_size / fig_size[np.abs(min_idx-1)])
     fig_size[np.abs(min_idx-1)] = max_fig_size
-
     fig, axs = plt.subplots(
         n_rows,
         n_cols,
@@ -249,7 +248,8 @@ def plot_matrices(
             vmin = torch.floor(vmin * 10) / 10
             vmax = torch.ceil(vmax * 10) / 10
             norm = colors.Normalize(vmin=vmin, vmax=vmax)
-
+        if matrix==0: norm = colors.Normalize(vmin=-30, vmax=0)
+        else: norm = colors.Normalize(vmin=-14, vmax=7)
         im = plot_matrix_on_ax(
             ax=axs[matrix],
             matrix_2d=matrices[matrix].squeeze(0),
@@ -265,23 +265,36 @@ def plot_matrices(
         row = matrix // n_cols
         col = matrix % n_cols
         if col != 0:            # not left column
-            axs[matrix].set_yticks([])
+            # axs[matrix].set_yticks([])
+            axs[matrix].set_yticks(ticks=[0,5], labels=[])
         else:
-            axs[matrix].set_yticks(ticks=np.arange(matrices[matrix].shape[0]), labels=np.arange(matrices[matrix].shape[0])+1)
+            # axs[matrix].set_yticks(ticks=np.arange(matrices[matrix].shape[0]), labels=np.arange(matrices[matrix].shape[0])+1)
+            axs[matrix].set_yticks(ticks=[0,5], labels=[1,6])
         if row != n_rows - 1:   # not bottom row
-            axs[matrix].set_xticks([])
+            # axs[matrix].set_xticks([])
+            axs[matrix].set_xticks(ticks=[0,9,19,29,39], labels=[])
         else:
-            axs[matrix].set_xticks(ticks=np.arange(matrices[matrix].shape[1]), labels=np.arange(matrices[matrix].shape[1])+1)
+            # axs[matrix].set_xticks(ticks=np.arange(matrices[matrix].shape[1]), labels=np.arange(matrices[matrix].shape[1])+1)
+            axs[matrix].set_xticks(ticks=[0,9,19,29,39], labels=[1,10,20,30,40])
         if not common_colorbar:
+            if matrix==0:
+                ticks=[-30, -20, -10, 0]
+                labels=['-30','-20','-10','0']
+            else:
+                ticks=[-14, -7, 0, 7]
+                labels=['-14','-7','0','7']
             cbar = fig.colorbar(
                 im,
                 ax=axs[matrix],
                 label=matrix_colorbar_labels[matrix],
-                aspect=15,
-                pad=0.02
+                aspect=5,
+                pad=0.02,
+                # ticks=ticks,
+                # format=FixedFormatter(labels),
             )
+            cbar.set_ticks(ticks=ticks, labels=labels)
             cbar.ax.yaxis.set_major_formatter(
-                FormatStrFormatter('%.1f')
+                FormatStrFormatter('%.0f')
             )
 
     # Remove unused axes
@@ -307,7 +320,6 @@ def plot_matrices(
     if fig_y_label is not None:
         fig.supylabel(fig_y_label)
 
-    plt.show(block=True)
 
 # ==================================================================
 # =========================== STATISTICS ===========================

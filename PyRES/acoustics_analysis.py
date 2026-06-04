@@ -428,11 +428,11 @@ def lateral_energy_fraction(rirs: torch.Tensor, fs: int) -> torch.Tensor:
     lef = np.zeros([1, rirs.shape[1], rirs.shape[2]])
 
     # Enconde A-format to B-format
-    conversion_matrix = torch.tensor([[1, 1, 1, 1],
-                                      [1,-1,-1, 1],
-                                      [1, 1,-1,-1],
-                                      [1,-1, 1,-1]])
-    conversion_matrix = 1/(2*torch.sqrt(torch.tensor([4*torch.pi]))) * torch.matmul( conversion_matrix, torch.diag(torch.tensor([1,3,3,3])) )
+    conversion_matrix = torch.tensor([[1.0, 1.0, 1.0, 1.0],
+                                      [1.0,-1.0,-1.0, 1.0],
+                                      [1.0, 1.0,-1.0,-1.0],
+                                      [1.0,-1.0, 1.0,-1.0]])
+    conversion_matrix = 1/(2*torch.sqrt(torch.tensor([4*torch.pi]))) * torch.matmul( conversion_matrix, torch.diag(torch.sqrt(torch.tensor([1,3,3,3]))) )
 
     rirs = torch.matmul(rirs, conversion_matrix)
 
@@ -441,18 +441,21 @@ def lateral_energy_fraction(rirs: torch.Tensor, fs: int) -> torch.Tensor:
             # rir_temp = rirs[:,i,j,:].squeeze()
             # rir_temp = torch.matmul(rir_temp, conversion_matrix)
             rir_omni = rirs[:,i,j,0]
-            rir_fig8 = rirs[:,i,j,2]
+            rir_fig8 = rirs[:,i,j,1]
 
             direct_path = find_direct_path(impulse_response=rir_omni, fs=fs)
             t_05 = 0.005 # 5 ms after direct sound
             t_80 = 0.080
-            index_start = direct_path + (fs*np.array([t_05])).astype(int).item()
+            index_start = direct_path + np.max([0, -(fs*np.array([0.003])).astype(int).item()])
+            index_mid = direct_path + (fs*np.array([t_05])).astype(int).item()
             index_end = direct_path + (fs*np.array([t_80])).astype(int).item()
 
             rir_omni = _octave_band_filter(rir_omni, fs=fs, octave_bands=octave_bands, frequency_range=frequency_range)
             rir_fig8 = _octave_band_filter(rir_fig8, fs=fs, octave_bands=octave_bands, frequency_range=frequency_range)
+            # rir_omni = pf.Signal(data=rir_omni.squeeze().numpy(), sampling_rate=fs, domain='time')
+            # rir_fig8 = pf.Signal(data=rir_fig8.squeeze().numpy(), sampling_rate=fs, domain='time')
             rir_omni = pf.dsp.time_window(signal=rir_omni, interval=(index_start, index_end), window='boxcar', unit='samples', crop='window')
-            rir_fig8 = pf.dsp.time_window(signal=rir_fig8, interval=(index_start, index_end), window='boxcar', unit='samples', crop='window')
+            rir_fig8 = pf.dsp.time_window(signal=rir_fig8, interval=(index_mid, index_end), window='boxcar', unit='samples', crop='window')
 
             energy_omni = np.sum(np.square(rir_omni.time), axis=1)
             energy_fig8 = np.sum(np.square(rir_fig8.time), axis=1)
