@@ -173,3 +173,4 @@ cython_debug/
 # PyRES
 /model_states
 /dataRES
+/local_files
