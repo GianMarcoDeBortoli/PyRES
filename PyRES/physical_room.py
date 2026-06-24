@@ -424,11 +424,24 @@ class _PhRoom(object):
     
     def _rir_cut(self, rirs: torch.Tensor, part: str) -> torch.Tensor: # = 'direct' | 'early' | 'late'
 
+        rirs = rirs.clone().detach()
+
         for i in range(rirs.shape[1]):  # receivers
             for j in range(rirs.shape[2]):  # emitters
-                rir = rirs[:, i, j].detach().clone()
+                rir = rirs[:, i, j]
+
                 direct_path = find_direct_path(rir, fs=self.fs)
+                mixing_time_index = direct_path + int(mixing_time(ir=rir[direct_path:].numpy(), n=1024, fs=self.fs, mixing_thresh=0.95, hop=512)/1000.0*self.fs)
+                rir_temp = pf.Signal(data=rir[direct_path:].numpy(), sampling_rate=self.fs, domain='time')
+                noise_floor_index = direct_path + (pr.intersection_time_lundeby(data=rir_temp, time_shift=True)[0] * self.fs).astype(int).item()
+
                 match part:
+                    case 'all':
+                        t_03 = 0.003
+                        index_start = np.max([0, direct_path - self.fs*t_03]).astype(int).item()
+                        index_end = noise_floor_index
+                        rirs[:index_start, i, j] = 0.0
+                        rirs[index_end:, i, j] = 0.0
                     case 'direct':
                         t_03 = 0.003
                         t_05 = 0.005
@@ -438,32 +451,28 @@ class _PhRoom(object):
                         rirs[index_end:, i, j] = 0.0
                     case 'direct+early':
                         t_03 = 0.003
-                        mt = mixing_time(ir=rir[direct_path:].numpy(), n=1024, fs=self.fs, mixing_thresh=0.95, hop=512)
                         index_start = np.max([0, direct_path - self.fs*t_03]).astype(int).item()
-                        index_end = direct_path + int(mt/1000.0*self.fs)
+                        index_end = mixing_time_index
                         rirs[:index_start, i, j] = 0.0
                         rirs[index_end:, i, j] = 0.0
                     case 'early':
                         t_05 = 0.005
-                        mt = mixing_time(ir=rir[direct_path:].numpy(), fs=self.fs)
                         index_start = direct_path + int(self.fs*t_05)
-                        index_end = direct_path + int(mt/1000.0*self.fs)
+                        index_end = mixing_time_index
                         rirs[:index_start, i, j] = 0.0
                         rirs[index_end:, i, j] = 0.0
                     case 'early+late':
                         t_05 = 0.005
                         index_start = direct_path + (np.array([self.fs*t_05])).astype(int).item()
-                        rir_temp = pf.Signal(data=rir, sampling_rate=self.fs, domain='time')
-                        index_end = direct_path + (pr.intersection_time_lundeby(data=rir_temp, time_shift=True)[0] * self.fs).astype(int).item()
+                        index_end = noise_floor_index
                         rirs[:index_start, i, j] = 0.0
                         rirs[index_end:, i, j] = 0.0
                     case 'late':
-                        mt = mixing_time(ir=rir[direct_path:].numpy(), n=1024, fs=self.fs, mixing_thresh=0.95, hop=512)
-                        index_start = direct_path + int(mt/1000.0*self.fs)
-                        rir_temp = pf.Signal(data=rir, sampling_rate=self.fs, domain='time')
-                        index_end = direct_path + (pr.intersection_time_lundeby(data=rir_temp, time_shift=True)[0] * self.fs).astype(int).item()
+                        index_start = mixing_time_index
+                        index_end = noise_floor_index
                         rirs[:index_start, i, j] = 0.0
                         rirs[index_end:, i, j] = 0.0
+
         return rirs
 
     def select_rir_part(self, part: str) -> OrderedDict:

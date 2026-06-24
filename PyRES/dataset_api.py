@@ -373,14 +373,26 @@ def get_rirs_of(
         n_samples = int(origin_len * target_fs / origin_fs)
         resample = True
 
-    matrix = torch.zeros(n_samples, n_receivers, n_emitters)
-    for i,r in enumerate(receiver_idx):
-        for j,e in enumerate(emitter_idx):
-            filename = f"{path}/E{e+1:03d}_R{r+1:03d}_M01.wav"
-            w = torchaudio.load(filename)[0]
-            if resample:
-                w = torchaudio.transforms.Resample(origin_fs, target_fs)(w)
-            matrix[:,i,j] = w.permute(1,0).squeeze()
+
+    if n_emitters == 40:
+        emitter_idx = [11, 10, 13, 12, 15, 14, 17, 16, 18, 19, 12, 9, 6, 7, 2, 3, 4, 1, 20, 21, 22, 23, 24, 25, 8, 27, 26, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+        matrix = torch.zeros(n_samples, n_receivers, n_emitters)
+        for i,r in enumerate(receiver_idx):
+            for j,e in enumerate(emitter_idx):
+                filename = f"{path}/E{e:03d}_R{r+1:03d}_M01.wav"
+                w = torchaudio.load(filename)[0]
+                if resample:
+                    w = torchaudio.transforms.Resample(origin_fs, target_fs)(w)
+                matrix[:,i,j] = w.permute(1,0).squeeze()
+    else:
+        matrix = torch.zeros(n_samples, n_receivers, n_emitters)
+        for i,r in enumerate(receiver_idx):
+            for j,e in enumerate(emitter_idx):
+                filename = f"{path}/E{e+1:03d}_R{r+1:03d}_M01.wav"
+                w = torchaudio.load(filename)[0]
+                if resample:
+                    w = torchaudio.transforms.Resample(origin_fs, target_fs)(w)
+                matrix[:,i,j] = w.permute(1,0).squeeze()
 
     return matrix, n_samples
 
