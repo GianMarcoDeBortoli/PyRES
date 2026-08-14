@@ -9,7 +9,7 @@ import torch
 # FLAMO
 from flamo.functional import db2mag
 # PyRES
-from PyRES.utils import expand_to_dimension, find_direct_path
+from pyres.utils import expand_to_dimension, find_direct_path
 
 
 # ==================================================================

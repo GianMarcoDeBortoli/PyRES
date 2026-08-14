@@ -1,14 +1,10 @@
 # ==================================================================
 # ============================ IMPORTS =============================
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-# FLAMO
-from flamo.functional import mag2db
+
 # PyRES
-from PyRES.virtual_room import FDN
-from PyRES.physical_room import PhRoom_wgn
-from PyRES.res import RES
+from pyres.virtual_room import FDN
+from pyres.physical_room import PhRoom_wgn
+from pyres.res import RES
 
 
 ###########################################################################################

@@ -7,7 +7,7 @@ from flamo import dsp, system
 from flamo.functional import db2mag, skew_matrix
 from flamo.auxiliary.reverb import rt2slope
 # PyRES
-from PyRES.functional import modal_reverb, one_pole_filter
+from pyres.functional import modal_reverb, one_pole_filter
 
 
 # ==================================================================

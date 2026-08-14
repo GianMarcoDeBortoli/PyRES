@@ -1,14 +1,11 @@
 # ==================================================================
 # ============================ IMPORTS =============================
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import matplotlib.pyplot as plt
+
 # FLAMO
 from flamo import dsp
 from flamo.functional import signal_gallery
 # PyRES
-from PyRES.virtual_room import (
+from pyres.virtual_room import (
     unitary_parallel_connections,
     unitary_mixing_matrix,
     random_FIRs,
@@ -16,7 +13,7 @@ from PyRES.virtual_room import (
     FDN,
     unitary_reverberator
 )
-from PyRES.plots import plot_irs_compare, plot_spectrograms_compare
+from pyres.plots import plot_irs_compare, plot_spectrograms_compare
 
 
 ###########################################################################################

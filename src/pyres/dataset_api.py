@@ -5,7 +5,7 @@ import json
 # PyTorch
 import torch, torchaudio
 # PyRES
-from PyRES.functional import energy_coupling
+from pyres.functional import energy_coupling
 
 
 # ==================================================================

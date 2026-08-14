@@ -8,7 +8,7 @@ import torch.nn as nn
 from flamo import dsp
 from flamo.functional import mag2db, WGN_reverb
 # PyRES
-from PyRES.dataset_api import (
+from pyres.dataset_api import (
     get_hl_info,
     get_ll_info,
     get_rirs,
@@ -16,9 +16,9 @@ from PyRES.dataset_api import (
     get_transducer_number,
     get_transducer_positions
 )
-from PyRES.functional import energy_coupling, direct_to_reverb_ratio
-from PyRES.functional import simulate_setup
-from PyRES.plots import (
+from pyres.functional import energy_coupling, direct_to_reverb_ratio
+from pyres.functional import simulate_setup
+from pyres.plots import (
     plot_room_setup,
     plot_coupling,
     plot_DRR,

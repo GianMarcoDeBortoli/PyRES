@@ -1,7 +1,7 @@
 [project]
 name = "pyres-lib"
 version = "0.1.0"
-description = "PyRES: A Python library for reverberation enhancement system development and simulation."
+description = "pyRES: A Python library for reverberation enhancement system development and simulation."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -15,7 +15,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Audio",
     "Intended Audience :: Developers",
@@ -30,6 +29,7 @@ dependencies = [
     "pyfar>=0.7",
     "pyrato>=0.4",
     "matplotlib>=3.10",
+    "seaborn>=0.13.2",
     "soundfile>=0.13",
 ]
 
@@ -39,3 +39,10 @@ requires = [
     "wheel",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pyres*"]

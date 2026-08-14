@@ -10,9 +10,9 @@ import torch.nn as nn
 from flamo import dsp, system
 from flamo.functional import db2mag, mag2db, get_magnitude, get_eigenvalues
 # PyRES
-from PyRES.physical_room import PhRoom
-from PyRES.virtual_room import VrRoom
-from PyRES.utils import expand_to_dimension
+from pyres.physical_room import PhRoom
+from pyres.virtual_room import VrRoom
+from pyres.utils import expand_to_dimension
 
 
 # ==================================================================

@@ -1,11 +1,8 @@
 # ==================================================================
 # ============================ IMPORTS =============================
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # PyRES
-from PyRES.physical_room import PhRoom_dataset
-from PyRES.dataset_api import get_hl_info, get_ll_info, get_transducer_number
+from pyres.physical_room import PhRoom_dataset
+from pyres.dataset_api import get_hl_info, get_ll_info, get_transducer_number
 
 
 ###########################################################################################

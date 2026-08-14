@@ -1,10 +1,8 @@
 # ==================================================================
 # ============================ IMPORTS =============================
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # PyRES
-from PyRES.physical_room import PhRoom_wgn
+from pyres.physical_room import PhRoom_wgn
 
 
 ###########################################################################################

@@ -1,10 +1,8 @@
 # ==================================================================
 # ============================ IMPORTS =============================
+import os
 import argparse
 import time
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # PyTorch
 import torch
 # FLAMO
@@ -12,11 +10,12 @@ from flamo import system, dsp
 from flamo.optimize.dataset import Dataset, load_dataset
 from flamo.optimize.trainer import Trainer
 # PyRES
-from PyRES.res import RES
-from PyRES.physical_room import PhRoom_wgn
-from PyRES.virtual_room import random_FIRs
-from PyRES.loss_functions import MSE_evs_mod
-from PyRES.functional import system_equalization_curve
+from pyres.res import RES
+from pyres.physical_room import PhRoom_wgn
+from pyres.virtual_room import random_FIRs
+from pyres.loss_functions import MSE_evs_mod
+from pyres.functional import system_equalization_curve
+from pyres.plots import plot_evs_compare, plot_spectrograms_compare
 
 ###########################################################################################
 # In this example, we train a virtual room to equalize the RES.
@@ -100,11 +99,14 @@ def train_virtual_room(args) -> None:
             dsp.Transform(lambda x: x.diag_embed())
         )
     )
-
+    
+    # ------------- Performance at initialization -------------
+    evs_init = res.open_loop_eigenvalues()
+    _,_,ir_init = res.system_simulation()
+    
     # ----------------- Initialize dataset --------------------
     dataset_input = torch.zeros(1, samplerate, n_M)
     dataset_input[:,0,:] = 1
-    evs_init = res.open_loop_eigenvalues()
     dataset_target = system_equalization_curve(evs=evs_init, fs=samplerate, nfft=nfft, f_c=8000)
     dataset_target = dataset_target.view(1,-1,1).expand(1, -1, n_M)
 
@@ -138,7 +140,20 @@ def train_virtual_room(args) -> None:
     
     # ------------------- Train the model --------------------
     trainer.train(train_loader, valid_loader)
+
+    # ------------ Performance after optimization ------------
+    evs_opt = res.open_loop_eigenvalues()
+    _,_,ir_opt = res.system_simulation()
     
+    # ------------------------ Plots -------------------------
+    plot_evs_compare(evs_init, evs_opt, samplerate, nfft, 20, 8000)
+    plot_spectrograms_compare(ir_init[:,0], ir_opt[:,0], samplerate, nfft=2**11, noverlap=2**10)
+
+    # ---------------- Save the model parameters -------------
+    # If desired, you can use the following line to save the virtual room model state.
+    # res.save_state_to(directory='./model_states/')
+    # The model state can be then loaded in another instance of the same virtual room to skip the training.
+
     return None
 
 

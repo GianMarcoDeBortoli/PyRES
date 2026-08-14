@@ -1,12 +1,10 @@
 # ==================================================================
 # ============================ IMPORTS =============================
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # PyTorch
 from flamo.functional import mag2db
 # PyRES
-from PyRES.physical_room import PhRoom_dataset
+from pyres.physical_room import PhRoom_dataset
 
 
 ###########################################################################################
