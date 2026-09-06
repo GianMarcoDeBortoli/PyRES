@@ -6,8 +6,9 @@ import pyfar as pf
 import pyrato as pr
 # PyTorch
 import torch
+import torch.nn.functional as F
 # FLAMO
-from flamo.functional import db2mag
+from flamo.functional import db2mag, get_eigenvalues, skew_matrix
 # PyRES
 from pyres.utils import expand_to_dimension, find_direct_path
 
@@ -224,8 +225,8 @@ def reverb_time(rir: torch.Tensor, fs: int, decay_interval: str='T30') -> torch.
 
     rir = rir.squeeze().numpy()
     pf_rir = pf.Signal(data=rir, sampling_rate=fs, domain='time')
-    edc = pr.energy_decay_curve_chu(data=pf_rir, time_shift=False)
-    rt = pr.reverberation_time_energy_decay_curve(energy_decay_curve=edc, T=decay_interval)
+    edc = pr.edc.energy_decay_curve_chu(data=pf_rir, time_shift=False)
+    rt = pr.parameters.reverberation_time_linear_regression(energy_decay_curve=edc, T=decay_interval)
 
     return torch.tensor(rt.item())
 
@@ -417,60 +418,188 @@ def modal_reverb(
 # ========================= OPTIMIZATION ===========================
 
 def system_equalization_curve(
-        evs: torch.Tensor,
-        fs: int,
-        nfft: int,
-        f_c: float=None
-    ) -> torch.Tensor:
-        f"""
-        Computes the system equalization curve.
-        If a crossover frequency is provided, the curve is divided into two parts:
-        a flat response below the crossover frequency and a moving average of the mean value above the crossover frequency.
-        If no crossover frequency is provided, the curve is a horizontal line at the mean value.
-        The mean is computed first from the absolute values of the eigenvalues across the channels, and then across frequencies.
-        
-            **Args**:
-                - evs (torch.Tensor): Open-loop eigenvalues [nfft, n_M].
-                - fs (int): Sampling frequency [Hz].
-                - nfft (int): FFT size.
-                - f_c (float, optional): Crossover frequency [Hz]. Defaults to None.
-            
-            **Returns**:
-                - torch.Tensor: The system equalization curve.
-        """
-        
-        # frequency samples
-        freqs = torch.linspace(0, fs/2, nfft//2+1)
+    feedback: torch.Tensor,
+    samplerate: float,
+    nfft: int,
+    mc_reps: int = 1000,
+    smoothing_fraction: float = 1 / 6,
+) -> tuple[torch.Tensor, ...]:
+    """
+    Compute a system equalization target curve.
 
-        # Compute RTFs
-        mean_evs = torch.mean(torch.abs(evs), dim=(1))
+    The function:
+        1. Generates random Stiefel-manifold realizations.
+        2. Computes the maximum absolute eigenvalue of the open loop
+           for each realization and frequency.
+        3. Averages the curves over the Monte Carlo realizations.
+        4. Smooths the mean eigenvalue curve using a fractional-octave
+           moving average.
+        5. Computes and smooths the maximum singular-value curve of
+           the feedback matrix using the same fractional-octave window.
 
-        if f_c is not None:
-            # Divide target between left and right of crossover frequency
-            index_crossover = torch.argmin(torch.abs(freqs - f_c))
-            left_interval = torch.arange(0, index_crossover+1)
-            right_interval = torch.arange(index_crossover, mean_evs.shape[0])
+    Args:
+        feedback:
+            Feedback transfer matrices, shape [nfft, n_M, n_L].
 
-            # Left target: horizontal line at mean RTFs value
-            scaling_factor = torch.mean(mean_evs[left_interval])
-            target_left = scaling_factor * torch.ones(index_crossover,)
+        samplerate:
+            Sampling rate [Hz].
 
-            # Right target: moving average of RTFs values
-            smooth_window_length = right_interval.shape[0]//6
-            # TODO: Find a way to apply this convolution with torch functions
-            smooth_evs = torch.tensor(np.convolve(mean_evs[right_interval], np.ones(smooth_window_length)/smooth_window_length, mode='valid'))
-            pre = torch.ones(smooth_window_length//2,) * smooth_evs[0]
-            post = torch.ones(smooth_window_length//2,) * smooth_evs[-1]
-            target_right = torch.cat((pre, smooth_evs, post), dim=0)
+        mc_reps:
+            Number of Monte Carlo Stiefel-manifold realizations.
 
-            # Create continuity between left and right
-            target_right = target_right * (target_left[-1] / target_right[0])
-            
-            # Concatenate left and right targets
-            target = torch.cat((target_left, target_right), dim=0)
-        else:
-            # Horizontal line at mean RTFs value
-            scaling_factor = torch.mean(mean_evs)
-            target = scaling_factor * torch.ones(mean_evs.shape[0],)
-        
-        return target
+        smoothing_fraction:
+            Width of the smoothing window in octaves.
+            E.g. 1/3 = one-third-octave smoothing,
+                 1/6 = one-sixth-octave smoothing.
+
+    Returns:
+        target:
+            Fractional-octave-smoothed mean maximum-eigenvalue curve.
+
+        mean_evs_curve:
+            Mean maximum-eigenvalue curve before smoothing.
+
+        evs:
+            Maximum-eigenvalue curve from the last Monte Carlo realization.
+    """
+
+    n_M = feedback.shape[1]
+    n_L = feedback.shape[2]
+
+    max_n = max(n_M, n_L)
+
+    # ------------------------------------------------------------------
+    # Monte Carlo evaluation
+    # ------------------------------------------------------------------
+
+    mean_evs_curve = torch.zeros(
+        nfft,
+        dtype=feedback.real.dtype,
+        device=feedback.device,
+    )
+
+    max_evs_curve = torch.zeros_like(mean_evs_curve)
+
+    for _ in range(mc_reps):
+
+        # Random Stiefel-manifold realization
+        M = torch.randn(
+            max_n,
+            max_n,
+            dtype=feedback.real.dtype,
+            device=feedback.device,
+        )
+
+        U = torch.matrix_exp(skew_matrix(M))[:n_L, :n_M]
+        U = torch.complex(U, torch.zeros_like(U))
+
+        # Open loop
+        L = torch.matmul(feedback, U)
+
+        # Maximum absolute eigenvalue at every frequency
+        evs = torch.abs(torch.linalg.eigvals(L)).amax(dim=1)
+
+        # Monte Carlo accumulation
+        mean_evs_curve += evs
+
+        # Maximum across Monte Carlo realizations
+        max_evs_curve = torch.maximum(
+            max_evs_curve,
+            evs,
+        )
+
+    # Monte Carlo mean
+    mean_evs_curve /= mc_reps
+
+    # ------------------------------------------------------------------
+    # Fractional-octave smoothing
+    # ------------------------------------------------------------------
+
+    target = fractional_octave_smooth(
+        mean_evs_curve,
+        samplerate=samplerate,
+        fraction_octave=smoothing_fraction,
+    )
+
+    return (
+        target,
+        mean_evs_curve,
+        evs,
+    )
+
+
+def fractional_octave_smooth(
+    curve: torch.Tensor,
+    samplerate: float,
+    fraction_octave: float,
+) -> torch.Tensor:
+    """
+    Smooth a frequency-domain curve using a centered
+    fractional-octave moving average.
+
+    The window around frequency f is
+
+        [f / 2^(B/2), f * 2^(B/2)]
+
+    where B = fraction_octave.
+
+    The result has exactly the same length as the input curve.
+    """
+
+    nfft = curve.shape[0]
+
+    # FFT frequency bins
+    freqs = torch.linspace(
+        0.0,
+        samplerate / 2,
+        nfft,
+        dtype=curve.dtype,
+        device=curve.device,
+    )
+
+    target = torch.empty_like(curve)
+
+    # DC cannot be handled logarithmically.
+    # Use the first few bins up to the first meaningful
+    # fractional-octave window.
+    target[0] = curve[0]
+
+    # Frequency ratio corresponding to half the octave bandwidth
+    ratio = 2.0 ** (fraction_octave / 2.0)
+
+    # Cumulative sum for efficient moving averages
+    cumsum = torch.cat(
+        (
+            torch.zeros(
+                1,
+                dtype=curve.dtype,
+                device=curve.device,
+            ),
+            torch.cumsum(curve, dim=0),
+        )
+    )
+
+    for i in range(1, nfft):
+
+        f = freqs[i]
+
+        f_low = f / ratio
+        f_high = f * ratio
+
+        # Convert frequency limits to FFT-bin indices
+        i_low = torch.searchsorted(freqs, f_low)
+        i_high = torch.searchsorted(
+            freqs,
+            f_high,
+            right=True,
+        )
+
+        i_low = max(int(i_low), 0)
+        i_high = min(int(i_high), nfft)
+
+        # Average over the fractional-octave band
+        target[i] = (
+            cumsum[i_high] - cumsum[i_low]
+        ) / (i_high - i_low)
+
+    return target

@@ -2,6 +2,7 @@
 # ============================ IMPORTS =============================
 from collections import OrderedDict
 import json
+import soundfile as sf
 # PyTorch
 import torch, torchaudio
 # PyRES
@@ -376,10 +377,10 @@ def get_rirs_of(
     for i,r in enumerate(receiver_idx):
         for j,e in enumerate(emitter_idx):
             filename = f"{path}/E{e+1:03d}_R{r+1:03d}_M01.wav"
-            w = torchaudio.load(filename)[0]
+            w, _ = sf.read(filename)
             if resample:
                 w = torchaudio.transforms.Resample(origin_fs, target_fs)(w)
-            matrix[:,i,j] = w.permute(1,0).squeeze()
+            matrix[:,i,j] = torch.tensor(w.squeeze())
 
     return matrix, n_samples
 

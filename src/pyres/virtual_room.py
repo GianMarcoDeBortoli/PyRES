@@ -244,14 +244,25 @@ class random_FIRs(VrRoom):
             alias_decay_db=alias_decay_db
         )
         self.FIR_order = FIR_order
+
+        filters = dsp.Filter(
+            size=(self.FIR_order, self.n_L, self.n_M),
+            nfft=self.nfft,
+            requires_grad=requires_grad,
+            alias_decay_db=self.alias_decay_db
+        )
+        eqs_params = filters.param.clone().detach()
+        frob_norm_squared = torch.sum(torch.square(eqs_params))
+        gain_value = torch.sqrt(n_M / frob_norm_squared)
+        compensation_gain = dsp.parallelGain(
+            size=(n_L,),
+            nfft=nfft,
+            requires_grad=False
+        )
+        compensation_gain.assign_value(torch.ones(n_L) * gain_value)
         
         self.v_ML = system.Series(
-            dsp.Filter(
-                size=(self.FIR_order, self.n_L, self.n_M),
-                nfft=self.nfft,
-                requires_grad=requires_grad,
-                alias_decay_db=self.alias_decay_db
-            )
+            filters, compensation_gain
         )
 
 

@@ -324,7 +324,8 @@ def plot_evs_compare(evs_init, evs_opt, fs: int, nfft: int, lower_f_lim: float, 
     plt.ylabel('Magnitude in dB')
     plt.tight_layout()
 
-    plt.show(block=True)
+    # plt.show(block=True)
+    plt.show()
 
     return None
 
@@ -361,7 +362,7 @@ def plot_irs_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, label1='In
     fig.supxlabel('Time in seconds')
     fig.supylabel('Amplitude')
 
-    plt.show(block=True)
+    plt.show()
 
 def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, nfft: int=2**10, noverlap: int=2**8, label1='Initialized', label2='Optimized') -> None:
     r"""
@@ -412,4 +413,4 @@ def plot_spectrograms_compare(ir_1: torch.Tensor, ir_2: torch.Tensor, fs: int, n
     cbar.ax.set_ylim(-100, 0)
     cbar.ax.set_yticks(ticks, ['-100','-80','-60','-40','-20','0'])
 
-    plt.show(block=True)
+    plt.show()
